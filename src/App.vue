@@ -1124,10 +1124,12 @@ onMounted(() => {
 
       <!-- CONTATO PAGE -->
       <div v-if="activeTab === 'contato'" class="space-y-8 animate-in fade-in duration-300">
-        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden">
-          <div class="absolute top-0 right-0 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
+        <div class="bg-slate-950 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden">
+          <div class="absolute -top-32 -left-24 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
+          <div class="absolute -bottom-40 -right-20 w-[26rem] h-[26rem] bg-orange-600/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" style="animation-delay: 1.5s" />
+          <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(circle at 1px 1px, rgba(251,191,36,0.5) 1px, transparent 0); background-size: 28px 28px;" />
           <div class="relative z-10 max-w-2xl mx-auto text-center space-y-4">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold backdrop-blur-sm">
               <Mail class="w-4 h-4" /> Fale Conosco
             </div>
             <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -1140,7 +1142,8 @@ onMounted(() => {
         </div>
 
         <div class="max-w-2xl mx-auto">
-          <form @submit.prevent="handleContactSubmit" class="bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-5">
+          <form @submit.prevent="handleContactSubmit" class="bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-5 backdrop-blur-sm relative overflow-hidden hover:border-amber-500/30 transition-all duration-300">
+            <div class="absolute -top-16 -right-16 w-48 h-48 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-slate-300 mb-1.5">Nome completo *</label>
@@ -1149,7 +1152,7 @@ onMounted(() => {
                   type="text"
                   required
                   placeholder="Seu nome"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-all"
+                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
                 />
               </div>
               <div>
@@ -1159,7 +1162,7 @@ onMounted(() => {
                   type="email"
                   required
                   placeholder="seu@email.com"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-all"
+                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
                 />
               </div>
             </div>
@@ -1171,14 +1174,14 @@ onMounted(() => {
                   v-model="contactForm.phone"
                   type="tel"
                   placeholder="(11) 99999-9999"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-all"
+                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
                 />
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-300 mb-1.5">Categoria do serviço</label>
                 <select
                   v-model="contactForm.category"
-                  class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-all"
+                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
                 >
                   <option value="">Selecione...</option>
                   <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option>
@@ -1194,7 +1197,7 @@ onMounted(() => {
                 type="text"
                 required
                 placeholder="Ex: Solicitação de orçamento para reforma"
-                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-all"
+                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
               />
             </div>
 
@@ -1205,7 +1208,7 @@ onMounted(() => {
                 required
                 rows="4"
                 placeholder="Descreva sua necessidade, dúvida ou proposta..."
-                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition-all resize-none"
+                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all resize-none"
               />
             </div>
 
@@ -1217,7 +1220,7 @@ onMounted(() => {
             <button
               type="submit"
               :disabled="contactSubmitting"
-              class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.99]"
             >
               <Mail class="w-4 h-4" />
               {{ contactSubmitting ? 'Enviando...' : 'Enviar Mensagem' }}
