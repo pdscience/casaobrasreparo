@@ -1,5 +1,5 @@
 import { insforge } from '../lib/insforge'
-import type { AIAnalysis, Plan, Professional, ServiceRequest } from '../types'
+import type { AIAnalysis, Plan, Professional, ServiceRequest, User } from '../types'
 
 export async function getServiceRequests(): Promise<ServiceRequest[]> {
   const { data, error } = await insforge.database
@@ -267,4 +267,82 @@ export async function getPlans(): Promise<Plan[]> {
     .order('rank', { ascending: true })
   if (error) throw error
   return (data as Plan[]) || []
+}
+
+export interface AuthUser {
+  id: string
+  email: string
+  name?: string | null
+}
+
+export async function signUpAuth(
+  email: string,
+  password: string,
+  name: string
+): Promise<{ user: AuthUser | null; requireEmailVerification: boolean }> {
+  const { data, error } = await insforge.auth.signUp({
+    email,
+    password,
+    name,
+  })
+  if (error) throw error
+  const user = data?.user
+  return {
+    user: user
+      ? { id: user.id, email: user.email ?? email, name: user.name ?? name }
+      : null,
+    requireEmailVerification: Boolean(data?.requireEmailVerification),
+  }
+}
+
+export async function signInAuth(
+  email: string,
+  password: string
+): Promise<AuthUser> {
+  const { data, error } = await insforge.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return { id: data.user.id, email: data.user.email ?? email, name: data.user.name }
+}
+
+export async function signOutAuth(): Promise<void> {
+  const { error } = await insforge.auth.signOut()
+  if (error) throw error
+}
+
+export async function getCurrentAuthUser(): Promise<AuthUser | null> {
+  const { data, error } = await insforge.auth.getCurrentUser()
+  if (error) return null
+  if (!data?.user) return null
+  return { id: data.user.id, email: data.user.email ?? '', name: data.user.name }
+}
+
+export async function getUserByAuthId(authId: string): Promise<User | null> {
+  const { data, error } = await insforge.database
+    .from('users')
+    .select('*')
+    .eq('auth_id', authId)
+    .maybeSingle()
+  if (error) throw error
+  return (data as User) || null
+}
+
+export async function createUserRecord(user: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> {
+  const { data, error } = await insforge.database
+    .from('users')
+    .insert([{ ...user, id: crypto.randomUUID() }])
+    .select()
+    .single()
+  if (error) throw error
+  return data as User
+}
+
+export async function updateUserRecord(authId: string, updates: Partial<User>): Promise<User> {
+  const { data, error } = await insforge.database
+    .from('users')
+    .update(updates)
+    .eq('auth_id', authId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as User
 }

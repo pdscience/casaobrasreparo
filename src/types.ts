@@ -72,3 +72,19 @@ export interface Plan {
   badge_text: string | null
   badge_border: string | null
 }
+
+export interface User {
+  id: string
+  auth_id: string
+  role: 'client' | 'pro'
+  name: string
+  email: string
+  birth_date: string
+  address: string
+  bairro: string
+  cidade: string
+  uf: string
+  category: string
+  created_at?: string
+  updated_at?: string
+}
