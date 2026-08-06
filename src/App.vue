@@ -45,9 +45,6 @@ import {
   FileCheck,
   Receipt,
   Handshake,
-  DollarSign,
-  BarChart3,
-  Award,
   Newspaper,
   Lightbulb,
   Hammer,
@@ -58,9 +55,10 @@ import {
   HardHat,
   LogIn,
   LogOut,
+  LayoutDashboard,
 } from 'lucide-vue-next'
 import type { AIAnalysis, Professional, ServiceRequest, Plan } from './types'
-import { analyzeWithAI, getServiceRequests, createServiceRequest, updateServiceRequest, getProfessionals, createProfessional, updateProfessional, uploadProfessionalAvatar, uploadServicePhoto, canCreateRequest, createPortalSession, changePlan, createCheckoutSession, getPlans, signUpAuth, signInAuth, signOutAuth, getCurrentAuthUser, getUserByAuthId, createUserRecord, updateUserRecord } from './api/insforgeService'
+import { analyzeWithAI, getServiceRequests, createServiceRequest, updateServiceRequest, getProfessionals, createProfessional, updateProfessional, getProfessionalByAuthId, uploadProfessionalAvatar, uploadServicePhoto, createPortalSession, changePlan, createCheckoutSession, getPlans, signUpAuth, signInAuth, signOutAuth, getCurrentAuthUser, getUserByAuthId, createUserRecord } from './api/insforgeService'
 import ProfessionalCard from './components/ProfessionalCard.vue'
 
 const CATEGORIES = [
@@ -76,7 +74,7 @@ const CATEGORIES = [
 
 const statusSteps = ['Pendente', 'Visita Agendada', 'Em Execução', 'Concluído']
 
-const userMode = ref<'client' | 'pro' | null>(null)
+const userMode = computed<'client' | 'pro' | null>(() => userProfile.value?.role ?? null)
 const activeTab = ref<string>('boas_vindas')
 
 const contactForm = ref({
@@ -118,6 +116,11 @@ const handleContactSubmit = () => {
   }, 500)
 }
 const requests = ref<ServiceRequest[]>([])
+const myRequests = computed(() =>
+  authUser.value
+    ? requests.value.filter((r) => r.client_id === authUser.value?.id)
+    : []
+)
 const professionals = ref<Professional[]>([])
 const proProfile = ref<Professional>({
   id: '',
@@ -163,6 +166,7 @@ const schedulePrice = ref<string>('')
 const scheduleObs = ref<string>('')
 
 const showUpgradeModal = ref<boolean>(false)
+const showOnboardingPlans = ref<boolean>(false)
 
 const isEditingProfile = ref<boolean>(false)
 const isRegistering = ref<boolean>(false)
@@ -200,8 +204,31 @@ async function hydrateAuth() {
     } catch {
       userProfile.value = null
     }
+    if (userProfile.value?.role === 'pro') {
+      await loadProfessionalProfile(user.id)
+    }
   } catch {
     authUser.value = null
+  }
+}
+
+function goToModule(role: 'client' | 'pro', view: 'login' | 'register' = 'login') {
+  if (authUser.value && userProfile.value?.role === role) {
+    activeTab.value = role === 'client' ? 'solicitar' : 'pedidos_pro'
+    return
+  }
+  authRole.value = role
+  authView.value = view
+  authError.value = ''
+  showAuth.value = true
+}
+
+async function loadProfessionalProfile(authId: string) {
+  try {
+    const pro = await getProfessionalByAuthId(authId)
+    if (pro) proProfile.value = pro
+  } catch {
+    // profile missing is handled by the UI
   }
 }
 
@@ -216,6 +243,12 @@ async function handleLogin() {
     } catch {
       userProfile.value = null
     }
+    if (userProfile.value?.role === 'pro') {
+      await loadProfessionalProfile(user.id)
+    }
+    activeTab.value = userProfile.value
+      ? (userProfile.value.role === 'pro' ? 'pedidos_pro' : 'solicitar')
+      : 'boas_vindas'
     showAuth.value = false
     loginEmail.value = ''
     loginPassword.value = ''
@@ -259,6 +292,30 @@ async function handleRegister() {
       category: authRole.value === 'pro' ? registerForm.value.category : '',
     })
     userProfile.value = record
+    if (authRole.value === 'pro') {
+      const pro = await createProfessional({
+        auth_id: user.id,
+        name: registerForm.value.name.trim(),
+        category: registerForm.value.category,
+        email: registerForm.value.email.trim(),
+        phone: '',
+        rating: 0,
+        reviews_count: 0,
+        avatar: '',
+        pix_key: '',
+        bio: '',
+        plan: 'gratuito',
+        plan_status: 'active',
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+        plan_expires_at: null,
+        requests_this_month: 0,
+        requests_reset_at: null,
+      })
+      proProfile.value = pro
+      showOnboardingPlans.value = true
+    }
+    activeTab.value = authRole.value === 'pro' ? 'pedidos_pro' : 'solicitar'
     showAuth.value = false
     registerForm.value = { name: '', email: '', password: '', birth_date: '', address: '', bairro: '', cidade: '', uf: '', category: '' }
     authRole.value = 'client'
@@ -278,6 +335,26 @@ async function handleLogout() {
   }
   authUser.value = null
   userProfile.value = null
+  proProfile.value = {
+    id: '',
+    name: '',
+    category: '',
+    email: '',
+    phone: '',
+    rating: 0,
+    reviews_count: 0,
+    avatar: '',
+    pix_key: '',
+    bio: '',
+    plan: 'gratuito',
+    plan_status: 'active',
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    plan_expires_at: null,
+    requests_this_month: 0,
+    requests_reset_at: null,
+  }
+  activeTab.value = 'boas_vindas'
 }
 
 const planMap = computed(() => {
@@ -370,9 +447,6 @@ async function loadData() {
     requests.value = serviceRequests
     professionals.value = professionalsData
     plans.value = plansData
-    if (professionalsData.length > 0) {
-      proProfile.value = professionalsData[0]
-    }
   } catch (err) {
     console.error('Erro ao carregar dados:', err)
   } finally {
@@ -460,6 +534,7 @@ async function handleConfirmOrder() {
 
   if (sendMode.value === 'broadcast') {
     const newOrder: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'> = {
+      client_id: authUser.value?.id ?? null,
       client_name: clientName.value || 'Cliente',
       client_phone: clientPhone.value || '',
       client_address: clientAddress.value || '',
@@ -496,6 +571,7 @@ async function handleConfirmOrder() {
 
     const pro = selectedOuroProfessional.value
     const newOrder: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'> = {
+      client_id: authUser.value?.id ?? null,
       client_name: clientName.value || 'Cliente',
       client_phone: clientPhone.value || '',
       client_address: clientAddress.value || '',
@@ -805,6 +881,18 @@ const requestUsage = computed(() => {
   }
 })
 
+const canReceiveRequests = computed(() => proProfile.value.plan !== 'gratuito')
+
+const proRequests = computed(() => {
+  if (!canReceiveRequests.value) return []
+  const category = proProfile.value.category?.toLowerCase()
+  return requests.value.filter((r) =>
+    r.status !== 'Concluído' &&
+    (r.broadcast || r.professional_id === proProfile.value.id) &&
+    (!category || r.category?.toLowerCase() === category)
+  )
+})
+
 function hasFeature(feature: string): boolean {
   return planFeatures.value[feature as keyof typeof planFeatures.value] as boolean
 }
@@ -878,7 +966,7 @@ onMounted(() => {
             Apresentação
           </button>
           <button
-            @click="activeTab = 'como_funciona'; userMode = null"
+            @click="activeTab = 'como_funciona'"
             :class="[
               'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
               activeTab === 'como_funciona'
@@ -890,7 +978,7 @@ onMounted(() => {
             Como Funciona
           </button>
           <button
-            @click="activeTab = 'para_profissionais'; userMode = null"
+            @click="activeTab = 'para_profissionais'"
             :class="[
               'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
               activeTab === 'para_profissionais'
@@ -902,7 +990,7 @@ onMounted(() => {
             Para Profissionais
           </button>
           <button
-            @click="activeTab = 'contato'; userMode = null"
+            @click="activeTab = 'contato'"
             :class="[
               'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
               activeTab === 'contato'
@@ -918,6 +1006,14 @@ onMounted(() => {
         <div class="flex items-center gap-2">
           <!-- AUTH (login/logout) -->
           <template v-if="authUser">
+            <button
+              @click="goToModule(userProfile?.role === 'pro' ? 'pro' : 'client')"
+              class="hidden sm:flex px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-bold hover:bg-amber-500/25 transition-all items-center gap-1.5"
+              title="Meu Painel"
+            >
+              <LayoutDashboard class="w-3.5 h-3.5" />
+              Meu Painel
+            </button>
             <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700">
               <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center">
                 <User class="w-3.5 h-3.5 text-slate-950" />
@@ -941,33 +1037,6 @@ onMounted(() => {
             <LogIn class="w-4 h-4" />
             Entrar
           </button>
-          <!-- DUAL MODE TOGGLE (CLIENT vs PRO) -->
-          <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1">
-          <button
-            @click="userMode = 'client'; if (activeTab !== 'boas_vindas') activeTab = 'solicitar'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
-              userMode === 'client'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
-                : 'text-slate-400 hover:text-white'
-            ]"
-          >
-            <User class="w-3.5 h-3.5" />
-            Modo Cliente
-          </button>
-          <button
-            @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
-              userMode === 'pro'
-                ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20 font-bold'
-                : 'text-slate-400 hover:text-white'
-            ]"
-          >
-            <Wrench class="w-3.5 h-3.5" />
-            Modo Prestador
-          </button>
-        </div>
 
           <button
             class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
@@ -992,6 +1061,14 @@ onMounted(() => {
 
         <div class="space-y-2">
           <button
+            v-if="authUser"
+            @click="goToModule(userProfile?.role === 'pro' ? 'pro' : 'client'); isMobileMenuOpen = false"
+            class="w-full px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-amber-500/15 text-amber-300 border border-amber-500/40"
+          >
+            <LayoutDashboard class="w-4 h-4" />
+            Meu Painel
+          </button>
+          <button
             @click="activeTab = 'boas_vindas'; isMobileMenuOpen = false"
             :class="[
               'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
@@ -1004,7 +1081,7 @@ onMounted(() => {
             ✨ Apresentação
           </button>
           <button
-            @click="activeTab = 'como_funciona'; userMode = null; isMobileMenuOpen = false"
+            @click="activeTab = 'como_funciona'; isMobileMenuOpen = false"
             :class="[
               'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
               activeTab === 'como_funciona'
@@ -1016,7 +1093,7 @@ onMounted(() => {
             Como Funciona
           </button>
           <button
-            @click="activeTab = 'para_profissionais'; userMode = null; isMobileMenuOpen = false"
+            @click="activeTab = 'para_profissionais'; isMobileMenuOpen = false"
             :class="[
               'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
               activeTab === 'para_profissionais'
@@ -1028,7 +1105,7 @@ onMounted(() => {
             Para Profissionais
           </button>
           <button
-            @click="activeTab = 'contato'; userMode = null; isMobileMenuOpen = false"
+            @click="activeTab = 'contato'; isMobileMenuOpen = false"
             :class="[
               'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
               activeTab === 'contato'
@@ -1039,33 +1116,6 @@ onMounted(() => {
             <Mail class="w-4 h-4" />
             Contato
           </button>
-
-          <div class="border-t border-slate-800 pt-2 mt-2 space-y-1">
-            <button
-              @click="userMode = 'client'; activeTab = 'solicitar'; isMobileMenuOpen = false"
-              :class="[
-                'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
-                userMode === 'client'
-                  ? 'bg-amber-500 text-slate-950 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              ]"
-            >
-              <User class="w-4 h-4" />
-              Modo Cliente
-            </button>
-            <button
-              @click="userMode = 'pro'; activeTab = 'pedidos_pro'; isMobileMenuOpen = false"
-              :class="[
-                'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
-                userMode === 'pro'
-                  ? 'bg-amber-400 text-slate-950 font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-              ]"
-            >
-              <Wrench class="w-4 h-4" />
-              Modo Prestador
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -1336,7 +1386,7 @@ onMounted(() => {
               <!-- DUAL CTA BUTTONS -->
               <div class="pt-2 flex flex-col sm:flex-row gap-3">
                 <button
-                  @click="userMode = 'client'; activeTab = 'solicitar'"
+                  @click="goToModule('client', 'register')"
                   class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs sm:text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Bot class="w-5 h-5" />
@@ -1344,7 +1394,7 @@ onMounted(() => {
                   <ArrowRight class="w-4 h-4" />
                 </button>
                 <button
-                  @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+                  @click="goToModule('pro', 'register')"
                   class="px-6 py-3.5 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-xs sm:text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2 backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Wrench class="w-5 h-5" />
@@ -1825,14 +1875,14 @@ onMounted(() => {
           <p class="text-sm text-slate-300">Pronto para começar?</p>
           <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              @click="userMode = 'client'; activeTab = 'solicitar'"
+              @click="goToModule('client', 'register')"
               class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Bot class="w-5 h-5" />
               Solicitar um Serviço
             </button>
             <button
-              @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+              @click="goToModule('pro', 'register')"
               class="px-6 py-3 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Wrench class="w-5 h-5" />
@@ -1859,7 +1909,7 @@ onMounted(() => {
             </p>
             <div class="flex flex-col sm:flex-row gap-3 pt-2">
               <button
-                @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+                @click="goToModule('pro', 'register')"
                 class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
               >
                 <Wrench class="w-5 h-5" />
@@ -1977,7 +2027,7 @@ onMounted(() => {
                 <li class="flex items-center gap-2 text-xs text-slate-500"><X class="w-3.5 h-3.5 text-slate-600 shrink-0" /> Relatórios avançados</li>
               </ul>
               <button
-                @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+                @click="goToModule('pro', 'register')"
                 class="w-full px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 transition-all"
               >
                 Começar Grátis
@@ -2001,7 +2051,7 @@ onMounted(() => {
                 <li class="flex items-center gap-2 text-xs text-slate-500"><X class="w-3.5 h-3.5 text-slate-600 shrink-0" /> Relatórios avançados</li>
               </ul>
               <button
-                @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+                @click="goToModule('pro', 'register')"
                 class="w-full px-4 py-2.5 rounded-xl bg-blue-500 text-white text-xs font-bold hover:bg-blue-400 transition-all"
               >
                 Assinar Prata
@@ -2025,7 +2075,7 @@ onMounted(() => {
                 <li class="flex items-center gap-2 text-xs text-amber-300"><Check class="w-3.5 h-3.5 text-amber-400 shrink-0" /> Suporte prioritário</li>
               </ul>
               <button
-                @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+                @click="goToModule('pro', 'register')"
                 class="w-full px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20"
               >
                 Assinar Ouro
@@ -2099,7 +2149,7 @@ onMounted(() => {
           <h3 class="text-lg font-extrabold text-white">Comece a receber chamados hoje</h3>
           <p class="text-xs text-slate-300 max-w-md mx-auto">Cadastro em menos de 2 minutos. Sem cartão de crédito, sem burocracia.</p>
           <button
-            @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
+            @click="goToModule('pro', 'register')"
             class="px-8 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 mx-auto"
           >
             <Wrench class="w-5 h-5" />
@@ -2816,8 +2866,8 @@ onMounted(() => {
           >
             <Clock class="w-3.5 h-3.5" />
             Meus Pedidos
-            <span v-if="requests.length > 0" class="bg-amber-400 text-slate-950 font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
-              {{ requests.length }}
+            <span v-if="myRequests.length > 0" class="bg-amber-400 text-slate-950 font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
+              {{ myRequests.length }}
             </span>
           </button>
           <button
@@ -2841,7 +2891,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="requests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
+        <div v-if="myRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
           <p class="text-sm text-slate-400">Nenhum serviço solicitado até o momento.</p>
           <button
             @click="activeTab = 'solicitar'"
@@ -2853,7 +2903,7 @@ onMounted(() => {
 
         <div v-else class="space-y-4">
           <div
-            v-for="req in requests"
+            v-for="req in myRequests"
             :key="req.id"
             class="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-slate-700 transition-all space-y-5"
           >
@@ -3091,9 +3141,37 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="space-y-4">
+        <!-- GATE: plan needed to receive requests -->
+        <div v-if="!canReceiveRequests" class="bg-slate-900 rounded-2xl p-10 border border-amber-500/30 text-center space-y-5">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+            <Lock class="w-7 h-7 text-amber-400" />
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-lg font-extrabold text-white">Assine um plano para começar a receber pedidos</h3>
+            <p class="text-sm text-slate-400 max-w-md mx-auto">
+              Seu perfil está no plano Gratuito. Escolha um plano pago para ver e aceitar os chamados da sua região.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+            <button
+              @click="activeTab = 'perfil_pro'"
+              class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+            >
+              <Sparkles class="w-4 h-4" />
+              Ver Planos
+            </button>
+            <button
+              @click="activeTab = 'perfil_pro'"
+              class="px-6 py-3 rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700 font-semibold text-sm hover:bg-slate-700 transition-all"
+            >
+              Editar meu perfil primeiro
+            </button>
+          </div>
+        </div>
+
+        <div v-else class="space-y-4">
           <div
-            v-for="req in requests"
+            v-for="req in proRequests"
             :key="req.id"
             class="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-slate-700 transition-all space-y-4"
           >
@@ -3188,6 +3266,11 @@ onMounted(() => {
                 </a>
               </div>
             </div>
+          </div>
+          <div v-if="proRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
+            <Clock class="w-10 h-10 text-slate-600 mx-auto" />
+            <p class="text-sm text-slate-400">Nenhum chamado para a sua categoria no momento.</p>
+            <p class="text-xs text-slate-500">Novos pedidos aparecem aqui assim que clientes solicitam serviços de {{ proProfile.category || 'sua categoria' }}.</p>
           </div>
         </div>
       </div>
@@ -3605,6 +3688,79 @@ onMounted(() => {
     </main>
 
     <!-- UPGRADE MODAL -->
+    <!-- ONBOARDING PLANS (after pro registration) -->
+    <div v-if="showOnboardingPlans" class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm"></div>
+      <div class="relative min-h-full flex items-center justify-center p-4 py-8">
+        <div class="w-full max-w-3xl bg-slate-900 rounded-3xl border border-amber-500/30 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+          <div class="relative bg-slate-950 p-6 border-b border-slate-800 text-center overflow-hidden">
+            <div class="absolute -top-16 left-1/2 -translate-x-1/2 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
+            <div class="relative">
+              <Sparkles class="w-9 h-9 text-amber-400 mx-auto mb-3" />
+              <h3 class="text-xl sm:text-2xl font-black text-white">Bem-vindo(a) à Casa Obras e Reparos!</h3>
+              <p class="text-sm text-slate-300 mt-2 max-w-lg mx-auto">
+                Sua conta de <strong class="text-amber-400">Prestador</strong> foi criada. Escolha um plano para começar a receber chamados da sua região.
+              </p>
+            </div>
+          </div>
+
+          <div class="p-6 space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div
+                v-for="p in PLANS"
+                :key="p.id"
+                :class="[
+                  'bg-slate-950/60 rounded-2xl p-4 border transition-all flex flex-col',
+                  p.id === 'bronze' ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'border-slate-800'
+                ]"
+              >
+                <div class="flex items-center gap-2 mb-3">
+                  <div class="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                    <component :is="p.icon" class="w-4.5 h-4.5 text-amber-400" style="width:18px;height:18px" />
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-white text-sm">{{ p.name }}</h4>
+                    <p class="text-amber-400 font-extrabold text-sm">{{ p.price }}<span class="text-[10px] text-slate-400 font-medium">/mês</span></p>
+                  </div>
+                </div>
+                <p class="text-[10px] text-slate-400 mb-2">{{ p.tagline }}</p>
+                <ul class="space-y-1.5 flex-1 mb-3">
+                  <li v-for="feature in p.features" :key="feature" class="flex items-center gap-1.5">
+                    <Check class="w-3 h-3 text-green-400 shrink-0" />
+                    <span class="text-[11px] text-slate-300">{{ feature }}</span>
+                  </li>
+                </ul>
+                <button
+                  v-if="p.id === 'gratuito'"
+                  @click="showOnboardingPlans = false"
+                  class="w-full py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-all"
+                >
+                  Continuar Grátis
+                </button>
+                <button
+                  v-else
+                  @click="subscribePlan(p.id); showOnboardingPlans = false"
+                  class="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black hover:from-amber-400 hover:to-yellow-300 transition-all shadow-md shadow-amber-500/20"
+                >
+                  {{ p.cta }}
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+              <p class="text-xs text-slate-400">Você pode escolher um plano a qualquer momento em "Meu Perfil".</p>
+              <button
+                @click="showOnboardingPlans = false"
+                class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+              >
+                Pular por enquanto
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div v-if="showUpgradeModal && upgradeRecommendation" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="showUpgradeModal = false"></div>
       <div class="relative bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-md w-full space-y-6">

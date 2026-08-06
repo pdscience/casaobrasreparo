@@ -13,6 +13,7 @@ export interface AIAnalysis {
 
 export interface Professional {
   id: string
+  auth_id?: string | null
   name: string
   category: string
   email: string
@@ -34,6 +35,7 @@ export interface Professional {
 export interface ServiceRequest {
   id: string
   created_at: string
+  client_id?: string | null
   client_name: string
   client_phone: string
   client_address: string

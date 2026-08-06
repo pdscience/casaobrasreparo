@@ -74,6 +74,17 @@ export async function getProfessional(id: string): Promise<Professional | null> 
   return (data as Professional) || null
 }
 
+export async function getProfessionalByAuthId(authId: string): Promise<Professional | null> {
+  const { data, error } = await insforge.database
+    .from('professionals')
+    .select('*')
+    .eq('auth_id', authId)
+    .maybeSingle()
+
+  if (error) throw error
+  return (data as Professional) || null
+}
+
 export async function createProfessional(professional: Omit<Professional, 'id'>): Promise<Professional> {
   const { data, error } = await insforge.database
     .from('professionals')
