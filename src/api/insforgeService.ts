@@ -287,9 +287,10 @@ export async function signUpAuth(
   })
   if (error) throw error
   const user = data?.user
+  const profileName = (user?.profile as { name?: string } | null | undefined)?.name
   return {
     user: user
-      ? { id: user.id, email: user.email ?? email, name: user.name ?? name }
+      ? { id: user.id, email: user.email ?? email, name: profileName ?? name }
       : null,
     requireEmailVerification: Boolean(data?.requireEmailVerification),
   }
@@ -300,8 +301,9 @@ export async function signInAuth(
   password: string
 ): Promise<AuthUser> {
   const { data, error } = await insforge.auth.signInWithPassword({ email, password })
-  if (error) throw error
-  return { id: data.user.id, email: data.user.email ?? email, name: data.user.name }
+  if (error || !data) throw error ?? new Error('Falha no login')
+  const profileName = (data.user.profile as { name?: string } | null | undefined)?.name
+  return { id: data.user.id, email: data.user.email ?? email, name: profileName ?? null }
 }
 
 export async function signOutAuth(): Promise<void> {
@@ -313,7 +315,8 @@ export async function getCurrentAuthUser(): Promise<AuthUser | null> {
   const { data, error } = await insforge.auth.getCurrentUser()
   if (error) return null
   if (!data?.user) return null
-  return { id: data.user.id, email: data.user.email ?? '', name: data.user.name }
+  const profileName = (data.user.profile as { name?: string } | null | undefined)?.name
+  return { id: data.user.id, email: data.user.email ?? '', name: profileName ?? null }
 }
 
 export async function getUserByAuthId(authId: string): Promise<User | null> {
