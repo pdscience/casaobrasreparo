@@ -1229,10 +1229,12 @@ onMounted(() => {
       <!-- COMO FUNCIONA PAGE -->
       <div v-if="activeTab === 'como_funciona'" class="space-y-10 animate-in fade-in duration-300">
         <!-- HERO -->
-        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden text-center">
-          <div class="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
+        <div class="bg-slate-950 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden text-center">
+          <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
+          <div class="absolute -bottom-40 right-0 w-[26rem] h-[26rem] bg-orange-600/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" style="animation-delay: 1.5s" />
+          <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(circle at 1px 1px, rgba(251,191,36,0.5) 1px, transparent 0); background-size: 28px 28px;" />
           <div class="relative z-10 max-w-2xl mx-auto space-y-4">
-            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold backdrop-blur-sm">
               <CircleDot class="w-4 h-4" /> Passo a Passo
             </div>
             <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -1247,7 +1249,7 @@ onMounted(() => {
         <!-- FLUXO CLIENTE -->
         <div class="space-y-6">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/30 to-yellow-400/20 border border-amber-500/25 flex items-center justify-center">
               <User class="w-5 h-5 text-amber-400" />
             </div>
             <div>
@@ -1258,10 +1260,12 @@ onMounted(() => {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Passo 1 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">1</div>
-              <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Image class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-blue-500/40 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">01</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/25 to-blue-400/10 text-blue-400 border border-blue-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Image class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Tire uma Foto</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1270,10 +1274,12 @@ onMounted(() => {
             </div>
 
             <!-- Passo 2 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">2</div>
-              <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Brain class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-purple-500/40 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">02</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/25 to-purple-400/10 text-purple-400 border border-purple-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Brain class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">IA Analisa</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1282,10 +1288,12 @@ onMounted(() => {
             </div>
 
             <!-- Passo 3 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">3</div>
-              <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Search class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">03</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-400/10 text-emerald-400 border border-emerald-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Search class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Escolha o Profissional</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1294,10 +1302,12 @@ onMounted(() => {
             </div>
 
             <!-- Passo 4 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">4</div>
-              <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <MessageCircle class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-cyan-500/40 hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">04</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/25 to-cyan-400/10 text-cyan-400 border border-cyan-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <MessageCircle class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Agende via WhatsApp</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1310,7 +1320,7 @@ onMounted(() => {
         <!-- FLUXO PROFISSIONAL -->
         <div class="space-y-6">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/30 to-yellow-400/20 border border-amber-500/25 flex items-center justify-center">
               <Wrench class="w-5 h-5 text-amber-400" />
             </div>
             <div>
@@ -1321,10 +1331,12 @@ onMounted(() => {
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Passo 1 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">1</div>
-              <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <ClipboardCheck class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/40 hover:shadow-xl hover:shadow-amber-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">01</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/25 to-yellow-400/10 text-amber-400 border border-amber-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <ClipboardCheck class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Cadastre-se</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1333,10 +1345,12 @@ onMounted(() => {
             </div>
 
             <!-- Passo 2 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">2</div>
-              <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Send class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-blue-500/40 hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">02</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/25 to-blue-400/10 text-blue-400 border border-blue-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Send class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Receba Solicitações</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1345,10 +1359,12 @@ onMounted(() => {
             </div>
 
             <!-- Passo 3 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">3</div>
-              <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <FileCheck class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-emerald-500/40 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">03</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/25 to-emerald-400/10 text-emerald-400 border border-emerald-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <FileCheck class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Confirme ou Proponha</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1357,10 +1373,12 @@ onMounted(() => {
             </div>
 
             <!-- Passo 4 -->
-            <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-amber-500/30 transition-all group relative">
-              <div class="absolute -top-3 -left-1 w-7 h-7 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-lg shadow-amber-500/30">4</div>
-              <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Receipt class="w-6 h-6" />
+            <div class="bg-slate-900/80 rounded-2xl p-5 border border-slate-800 hover:border-rose-500/40 hover:shadow-xl hover:shadow-rose-500/10 hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">04</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500/25 to-rose-400/10 text-rose-400 border border-rose-500/25 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
+                  <Receipt class="w-6 h-6" />
+                </div>
               </div>
               <h4 class="font-bold text-white text-sm mb-1">Atenda e Emita Recibo</h4>
               <p class="text-xs text-slate-400 leading-relaxed">
@@ -1371,14 +1389,15 @@ onMounted(() => {
         </div>
 
         <!-- DIFERENCIAIS -->
-        <div class="bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6">
-          <div class="text-center space-y-2">
+        <div class="bg-slate-900/80 rounded-2xl p-6 sm:p-8 border border-slate-800 space-y-6 relative overflow-hidden">
+          <div class="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div class="relative text-center space-y-2">
             <h3 class="text-lg font-extrabold text-white">Por que escolher o Casa Obras e Reparos?</h3>
             <p class="text-xs text-slate-400 max-w-md mx-auto">Benefícios que fazem a diferença para clientes e profissionais</p>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="flex items-start gap-3 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
+          <div class="relative grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 hover:-translate-y-0.5 transition-all duration-300 group">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500/25 to-yellow-400/10 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
                 <Brain class="w-4.5 h-4.5" />
               </div>
               <div>
@@ -1386,8 +1405,8 @@ onMounted(() => {
                 <p class="text-[11px] text-slate-400 mt-0.5">Análise inteligente da foto com estimativa de valor e categoria automatica.</p>
               </div>
             </div>
-            <div class="flex items-start gap-3 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10 hover:-translate-y-0.5 transition-all duration-300 group">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/25 to-emerald-400/10 text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
                 <MessageCircle class="w-4.5 h-4.5" />
               </div>
               <div>
@@ -1395,8 +1414,8 @@ onMounted(() => {
                 <p class="text-[11px] text-slate-400 mt-0.5">Contato imediato sem intermediários. Agende, combine e resolva pelo app.</p>
               </div>
             </div>
-            <div class="flex items-start gap-3 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center shrink-0">
+            <div class="flex items-start gap-3 p-4 rounded-xl bg-slate-800/60 border border-slate-700/50 hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-300 group">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/25 to-blue-400/10 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-transform">
                 <Receipt class="w-4.5 h-4.5" />
               </div>
               <div>
@@ -1413,14 +1432,14 @@ onMounted(() => {
           <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               @click="userMode = 'client'; activeTab = 'solicitar'"
-              class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+              class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Bot class="w-5 h-5" />
               Solicitar um Serviço
             </button>
             <button
               @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
-              class="px-6 py-3 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2"
+              class="px-6 py-3 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Wrench class="w-5 h-5" />
               Ser um Profissional Parceiro
