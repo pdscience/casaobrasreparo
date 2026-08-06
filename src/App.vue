@@ -922,11 +922,15 @@ onMounted(() => {
       <!-- WELCOME / SYSTEM PRESENTATION TAB -->
       <div v-if="activeTab === 'boas_vindas'" class="space-y-8 animate-in fade-in duration-300">
         <!-- HERO PRESENTATION BANNER -->
-        <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden shadow-2xl">
-          <div class="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
-          <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        <div class="relative rounded-3xl p-6 sm:p-10 lg:p-14 border border-amber-500/20 overflow-hidden shadow-2xl bg-slate-950">
+          <!-- background layers -->
+          <div class="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
+          <div class="absolute -bottom-40 -right-24 w-[28rem] h-[28rem] bg-orange-600/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" style="animation-delay: 1.5s" />
+          <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(circle at 1px 1px, rgba(251,191,36,0.5) 1px, transparent 0); background-size: 28px 28px;" />
+
+          <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div class="space-y-5">
-              <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold tracking-wide">
+              <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold tracking-wide backdrop-blur-sm">
                 <Sparkles class="w-4 h-4 text-amber-400" /> Plataforma Integrada com Inteligência Artificial
               </div>
 
@@ -942,7 +946,7 @@ onMounted(() => {
               <div class="pt-2 flex flex-col sm:flex-row gap-3">
                 <button
                   @click="userMode = 'client'; activeTab = 'solicitar'"
-                  class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs sm:text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                  class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs sm:text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Bot class="w-5 h-5" />
                   Experimentar como Cliente (Criar Orçamento com IA)
@@ -950,7 +954,7 @@ onMounted(() => {
                 </button>
                 <button
                   @click="userMode = 'pro'; activeTab = 'pedidos_pro'"
-                  class="px-6 py-3.5 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-xs sm:text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2 backdrop-blur-sm"
+                  class="px-6 py-3.5 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-xs sm:text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2 backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Wrench class="w-5 h-5" />
                   Acessar Painel do Prestador (Gestão & Relatórios)
@@ -958,9 +962,61 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="relative flex items-center justify-center">
-              <div class="absolute -inset-4 bg-gradient-to-r from-amber-500/20 to-yellow-400/20 rounded-full blur-3xl"></div>
-              <img :src="lojaUrl" alt="Casa Obras e Reparos" class="relative w-full max-w-sm lg:max-w-md rounded-3xl shadow-2xl shadow-amber-500/10 border border-amber-500/20 object-cover aspect-square" />
+            <!-- FACHADA COM MOLDURA DE VIDRO + BADGES FLUTUANTES -->
+            <div class="relative flex items-center justify-center py-6">
+              <div class="absolute -inset-6 bg-gradient-to-r from-amber-500/25 via-yellow-400/10 to-orange-500/25 rounded-full blur-3xl animate-pulse-slow" />
+
+              <div class="relative p-1.5 rounded-[1.75rem] bg-gradient-to-br from-amber-500/60 via-slate-700/40 to-yellow-400/60 shadow-2xl shadow-amber-500/20 group hover:rotate-0 rotate-2 transition-transform duration-500">
+                <div class="relative overflow-hidden rounded-[1.35rem]">
+                  <img :src="lojaUrl" alt="Casa Obras e Reparos" class="w-full max-w-sm lg:max-w-md aspect-square object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-slate-950/20" />
+                </div>
+              </div>
+
+              <!-- BADGE IA -->
+              <div class="absolute top-3 -left-2 sm:left-0 animate-float bg-slate-950/90 backdrop-blur-md border border-amber-500/40 rounded-2xl px-3.5 py-2 shadow-lg shadow-amber-500/10">
+                <div class="flex items-center gap-2">
+                  <Brain class="w-4 h-4 text-amber-400" />
+                  <span class="text-[11px] font-bold text-white">IA Integrada</span>
+                </div>
+              </div>
+
+              <!-- BADGE WHATSAPP -->
+              <div class="absolute bottom-8 -right-1 sm:right-0 animate-float bg-slate-950/90 backdrop-blur-md border border-emerald-500/40 rounded-2xl px-3.5 py-2 shadow-lg shadow-emerald-500/10" style="animation-delay: 1s">
+                <div class="flex items-center gap-2">
+                  <MessageCircle class="w-4 h-4 text-emerald-400" />
+                  <span class="text-[11px] font-bold text-white">WhatsApp Rápido</span>
+                </div>
+              </div>
+
+              <!-- SELO 4.9★ -->
+              <div class="absolute -bottom-2 left-2 sm:left-6 w-16 h-16 animate-spin-slow">
+                <div class="absolute inset-0 rounded-full border-2 border-dashed border-amber-400/50" />
+                <div class="absolute inset-[7px] rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex flex-col items-center justify-center shadow-lg shadow-amber-500/30 animate-pulse-slow">
+                  <span class="text-white font-black text-xs leading-none">4.9</span>
+                  <Star class="w-2.5 h-2.5 text-white fill-white mt-0.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STATS BAND -->
+          <div class="relative z-10 mt-10 pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="text-center sm:text-left">
+              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">+200</div>
+              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Profissionais cadastrados</div>
+            </div>
+            <div class="text-center sm:text-left">
+              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">4.9★</div>
+              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Avaliação média dos serviços</div>
+            </div>
+            <div class="text-center sm:text-left">
+              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">24h</div>
+              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Resposta média aos chamados</div>
+            </div>
+            <div class="text-center sm:text-left">
+              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">100%</div>
+              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Digital, do orçamento ao recibo</div>
             </div>
           </div>
         </div>
@@ -974,43 +1030,30 @@ onMounted(() => {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- WORKFLOW CLIENT -->
-            <div class="bg-slate-900/80 rounded-3xl p-6 border border-slate-800 space-y-5 relative overflow-hidden backdrop-blur-sm">
+            <div class="bg-slate-900/80 rounded-3xl p-6 border border-slate-800 space-y-5 relative overflow-hidden backdrop-blur-sm hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group">
               <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -z-0 pointer-events-none" />
               <div class="relative z-10 space-y-4">
                 <div class="flex items-center gap-3 text-amber-400 font-bold text-sm border-b border-slate-800 pb-3">
-                  <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/30 to-yellow-400/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <User class="w-4 h-4" />
                   </div>
                   Jornada para o Cliente
                 </div>
 
-                <ul class="space-y-4 text-xs text-slate-300">
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-                    <div>
-                      <strong class="text-white block">Envio da Foto do Problema:</strong>
-                      Selecione ou tire uma foto de tomadas, vazamentos, eletrodomésticos ou pinturas diretamente do celular.
+                <ul class="space-y-0">
+                  <li v-for="(step, idx) in [
+                    { t: 'Envio da Foto do Problema:', d: 'Selecione ou tire uma foto de tomadas, vazamentos, eletrodomésticos ou pinturas diretamente do celular.' },
+                    { t: 'Análise Instantânea com IA:', d: 'O sistema gera diagnóstico, tempo estimado, materiais e faixa de custo sugerida em Reais (R$).' },
+                    { t: 'Atendimento & WhatsApp:', d: 'Agende visita ou receba o valor do serviço com notificações e botão direto para o WhatsApp do profissional.' },
+                    { t: 'Recibo Digital e Avaliação:', d: 'Acesse recibos digitais em PDF após o término e avalie a qualidade do serviço do profissional.' },
+                  ]" :key="'cli-'+idx" class="relative flex items-start gap-3 pb-4 group/step animate-in fade-in slide-in-from-bottom-2 duration-500" :style="{ animationDelay: (idx*120)+'ms' }">
+                    <div class="flex flex-col items-center shrink-0">
+                      <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center text-[10px] shadow-lg shadow-amber-500/20 group-hover/step:scale-110 transition-transform z-10">{{ idx + 1 }}</span>
+                      <span v-if="idx < 3" class="flex-1 w-px bg-gradient-to-b from-amber-500/50 to-slate-700 my-1 min-h-5" />
                     </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
                     <div>
-                      <strong class="text-white block">Análise Instantânea com IA:</strong>
-                      O sistema gera diagnóstico, tempo estimado, materiais e faixa de custo sugerida em Reais (R$).
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
-                    <div>
-                      <strong class="text-white block">Atendimento & WhatsApp:</strong>
-                      Agende visita ou receba o valor do serviço com notificações e botão direto para o WhatsApp do profissional.
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
-                    <div>
-                      <strong class="text-white block">Recibo Digital e Avaliação:</strong>
-                      Acesse recibos digitais em PDF após o término e avalie a qualidade do serviço do profissional.
+                      <strong class="text-white block text-xs sm:text-sm">{{ step.t }}</strong>
+                      <p class="text-xs text-slate-400 leading-relaxed mt-0.5">{{ step.d }}</p>
                     </div>
                   </li>
                 </ul>
@@ -1018,43 +1061,30 @@ onMounted(() => {
             </div>
 
             <!-- WORKFLOW PRO -->
-            <div class="bg-slate-900/80 rounded-3xl p-6 border border-slate-800 space-y-5 relative overflow-hidden backdrop-blur-sm">
+            <div class="bg-slate-900/80 rounded-3xl p-6 border border-slate-800 space-y-5 relative overflow-hidden backdrop-blur-sm hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 group">
               <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -z-0 pointer-events-none" />
               <div class="relative z-10 space-y-4">
                 <div class="flex items-center gap-3 text-amber-400 font-bold text-sm border-b border-slate-800 pb-3">
-                  <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/30 to-yellow-400/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Wrench class="w-4 h-4" />
                   </div>
                   Jornada para o Prestador de Serviços
                 </div>
 
-                <ul class="space-y-4 text-xs text-slate-300">
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">1</span>
-                    <div>
-                      <strong class="text-white block">Painel de Atendimentos em Tempo Real:</strong>
-                      Visualize chamados pendentes com foto, diagnóstico da IA e endereço do cliente.
+                <ul class="space-y-0">
+                  <li v-for="(step, idx) in [
+                    { t: 'Painel de Atendimentos em Tempo Real:', d: 'Visualize chamados pendentes com foto, diagnóstico da IA e endereço do cliente.' },
+                    { t: 'Agende Visita ou Envie Valor Direto:', d: 'Defina data, horário e valor acordado com lembrete e mensagem formatada para o WhatsApp do cliente.' },
+                    { t: 'Emissão de Recibo Digital:', d: 'Gere comprovantes impressos ou em PDF com dados do serviço e sua chave PIX.' },
+                    { t: 'Relatórios de Faturamento Mensal:', d: 'Acompanhe receita total em gráficos, quantidade de serviços e ticket médio.' },
+                  ]" :key="'pro-'+idx" class="relative flex items-start gap-3 pb-4 group/step animate-in fade-in slide-in-from-bottom-2 duration-500" :style="{ animationDelay: (idx*120)+'ms' }">
+                    <div class="flex flex-col items-center shrink-0">
+                      <span class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center text-[10px] shadow-lg shadow-amber-500/20 group-hover/step:scale-110 transition-transform z-10">{{ idx + 1 }}</span>
+                      <span v-if="idx < 3" class="flex-1 w-px bg-gradient-to-b from-amber-500/50 to-slate-700 my-1 min-h-5" />
                     </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">2</span>
                     <div>
-                      <strong class="text-white block">Agende Visita ou Envie Valor Direto:</strong>
-                      Defina data, horário e valor acordado com lembrete e mensagem formatada para o WhatsApp do cliente.
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">3</span>
-                    <div>
-                      <strong class="text-white block">Emissão de Recibo Digital:</strong>
-                      Gere comprovantes impressos ou em PDF com dados do serviço e sua chave PIX.
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 text-slate-950 font-bold flex items-center justify-center shrink-0 text-[10px]">4</span>
-                    <div>
-                      <strong class="text-white block">Relatórios de Faturamento Mensal:</strong>
-                      Acompanhe receita total em gráficos, quantidade de serviços e ticket médio.
+                      <strong class="text-white block text-xs sm:text-sm">{{ step.t }}</strong>
+                      <p class="text-xs text-slate-400 leading-relaxed mt-0.5">{{ step.d }}</p>
                     </div>
                   </li>
                 </ul>
@@ -1071,64 +1101,22 @@ onMounted(() => {
           </h3>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div class="group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 backdrop-blur-sm">
-              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
-                <Bot class="w-6 h-6" />
+            <div v-for="(feat, i) in [
+              { icon: Bot, t: 'Visão Computacional por IA', d: 'Diagnóstico automático de danos, materiais necessários e precificação orientada ao mercado técnico.' },
+              { icon: MessageSquare, t: 'Notificações por WhatsApp', d: 'Envio com 1 clique de lembretes de visitas, atualizações de status e confirmação de valores.' },
+              { icon: FileText, t: 'Recibos Digitais Prontos', d: 'Comprovante oficial impresso ou baixável em formato padronizado com chave PIX e itens executados.' },
+              { icon: TrendingUp, t: 'Faturamento e Relatórios', d: 'Métricas de faturamento acumulado, comparativos mensais e acompanhamento financeiro para o profissional.' },
+              { icon: Star, t: 'Perfil com Avaliações', d: 'Construção de reputação com estrelas e depoimentos reais dos clientes atendidos.' },
+              { icon: ShieldCheck, t: 'Design Mobile Responsivo', d: 'Interface intuitiva e rápida para o uso diário em smartphones, tablets e computadores.' },
+            ]" :key="'feat-'+i" class="relative group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-xl hover:shadow-amber-500/10 hover:-translate-y-1 transition-all duration-300 backdrop-blur-sm overflow-hidden">
+              <span class="absolute -top-3 right-2 text-6xl font-black text-stroke-amber select-none pointer-events-none opacity-70 group-hover:opacity-100 transition-opacity">{{ String(i + 1).padStart(2, '0') }}</span>
+              <div class="relative">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/25 to-yellow-400/15 text-amber-400 flex items-center justify-center border border-amber-500/25 group-hover:scale-110 group-hover:rotate-6 group-hover:text-amber-300 transition-all duration-300">
+                  <component :is="feat.icon" class="w-6 h-6" />
+                </div>
               </div>
-              <h4 class="font-bold text-white text-sm">Visão Computacional por IA</h4>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Diagnóstico automático de danos, materiais necessários e precificação orientada ao mercado técnico.
-              </p>
-            </div>
-
-            <div class="group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 backdrop-blur-sm">
-              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
-                <MessageSquare class="w-6 h-6" />
-              </div>
-              <h4 class="font-bold text-white text-sm">Notificações por WhatsApp</h4>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Envio com 1 clique de lembretes de visitas, atualizações de status e confirmação de valores.
-              </p>
-            </div>
-
-            <div class="group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 backdrop-blur-sm">
-              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
-                <FileText class="w-6 h-6" />
-              </div>
-              <h4 class="font-bold text-white text-sm">Recibos Digitais Prontos</h4>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Comprovante oficial impresso ou baixável em formato padronizado com chave PIX e itens executados.
-              </p>
-            </div>
-
-            <div class="group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 backdrop-blur-sm">
-              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
-                <TrendingUp class="w-6 h-6" />
-              </div>
-              <h4 class="font-bold text-white text-sm">Faturamento e Relatórios</h4>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Métricas de faturamento acumulado, comparativos mensais e acompanhamento financeiro para o profissional.
-              </p>
-            </div>
-
-            <div class="group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 backdrop-blur-sm">
-              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
-                <Star class="w-6 h-6" />
-              </div>
-              <h4 class="font-bold text-white text-sm">Perfil com Avaliações</h4>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Construção de reputação com estrelas e depoimentos reais dos clientes atendidos.
-              </p>
-            </div>
-
-            <div class="group bg-slate-900/80 p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 backdrop-blur-sm">
-              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/20 to-yellow-400/10 text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
-                <ShieldCheck class="w-6 h-6" />
-              </div>
-              <h4 class="font-bold text-white text-sm">Design Mobile Responsivo</h4>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Interface intuitiva e rápida para o uso diário em smartphones, tablets e computadores.
-              </p>
+              <h4 class="font-bold text-white text-sm">{{ feat.t }}</h4>
+              <p class="text-xs text-slate-400 leading-relaxed">{{ feat.d }}</p>
             </div>
           </div>
         </div>
