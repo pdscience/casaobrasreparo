@@ -1,0 +1,6 @@
+{
+  "name": "Casa Obras e Reparos - Gestão & Orçamentos com IA",
+  "description": "Aplicativo para prestadores de serviços e clientes com análise de foto por IA, orçamentos instantâneos, agendamento de visitas, recibos digitais, relatórios financeiros e notificações WhatsApp.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
