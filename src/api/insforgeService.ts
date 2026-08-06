@@ -126,6 +126,30 @@ function isTransientUploadError(err: unknown): boolean {
   return /Slow Down|503|500|502|504|network|timeout|fetch failed/i.test(msg)
 }
 
+export async function uploadServicePhoto(file: File): Promise<string> {
+  const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '_').slice(-60) || 'photo'
+  const key = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`
+  const delays = [500, 1200, 2500]
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const { data, error } = await insforge.storage
+        .from('service-photos')
+        .upload(key, file)
+      if (!error && data?.url) return data.url
+      lastErr = error
+      if (!isTransientUploadError(error) || attempt === delays.length) {
+        throw error ?? new Error('Upload failed')
+      }
+    } catch (err) {
+      lastErr = err
+      if (!isTransientUploadError(err) || attempt === delays.length) throw err
+    }
+    await new Promise((r) => setTimeout(r, delays[attempt]))
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Upload failed')
+}
+
 export async function analyzeWithAI(imageBase64: string | undefined, category: string, notes: string): Promise<AIAnalysis> {
   const response = await fetch('/api/analyze-service', {
     method: 'POST',

@@ -60,7 +60,7 @@ import {
   LogOut,
 } from 'lucide-vue-next'
 import type { AIAnalysis, Professional, ServiceRequest, Plan } from './types'
-import { analyzeWithAI, getServiceRequests, createServiceRequest, updateServiceRequest, getProfessionals, createProfessional, updateProfessional, uploadProfessionalAvatar, canCreateRequest, createPortalSession, changePlan, createCheckoutSession, getPlans, signUpAuth, signInAuth, signOutAuth, getCurrentAuthUser, getUserByAuthId, createUserRecord, updateUserRecord } from './api/insforgeService'
+import { analyzeWithAI, getServiceRequests, createServiceRequest, updateServiceRequest, getProfessionals, createProfessional, updateProfessional, uploadProfessionalAvatar, uploadServicePhoto, canCreateRequest, createPortalSession, changePlan, createCheckoutSession, getPlans, signUpAuth, signInAuth, signOutAuth, getCurrentAuthUser, getUserByAuthId, createUserRecord, updateUserRecord } from './api/insforgeService'
 import ProfessionalCard from './components/ProfessionalCard.vue'
 
 const CATEGORIES = [
@@ -146,6 +146,7 @@ const clientPhone = ref<string>('')
 const clientAddress = ref<string>('')
 const notes = ref<string>('')
 const imagePreview = ref<string | null>(null)
+const photoFile = ref<File | null>(null)
 const isAnalyzing = ref<boolean>(false)
 const latestAiResult = ref<AIAnalysis | null>(null)
 const createdOrderSuccess = ref<ServiceRequest | null>(null)
@@ -448,13 +449,22 @@ async function handleSaveProfile() {
 async function handleConfirmOrder() {
   if (!latestAiResult.value) return
 
+  let photoUrl = imagePreview.value || ''
+  if (photoFile.value) {
+    try {
+      photoUrl = await uploadServicePhoto(photoFile.value)
+    } catch (err) {
+      console.error('Erro ao enviar foto:', err)
+    }
+  }
+
   if (sendMode.value === 'broadcast') {
     const newOrder: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'> = {
       client_name: clientName.value || 'Cliente',
       client_phone: clientPhone.value || '',
       client_address: clientAddress.value || '',
       category: selectedCategory.value,
-      photo_url: imagePreview.value || '',
+      photo_url: photoUrl,
       notes: notes.value || '',
       ai_analysis: latestAiResult.value,
       status: 'Pendente',
@@ -490,7 +500,7 @@ async function handleConfirmOrder() {
       client_phone: clientPhone.value || '',
       client_address: clientAddress.value || '',
       category: selectedCategory.value,
-      photo_url: imagePreview.value || '',
+      photo_url: photoUrl,
       notes: notes.value || '',
       ai_analysis: latestAiResult.value,
       status: 'Pendente',
@@ -525,6 +535,7 @@ function resetForm() {
   selectedOuroProfessional.value = null
   sendMode.value = null
   imagePreview.value = null
+  photoFile.value = null
   notes.value = ''
   clientName.value = ''
   clientPhone.value = ''
@@ -630,6 +641,7 @@ function handlePhotoUpload(e: Event) {
   const target = e.target as HTMLInputElement
   const file = target.files?.[0]
   if (file) {
+    photoFile.value = file
     const reader = new FileReader()
     reader.onloadend = () => {
       imagePreview.value = reader.result as string
@@ -2451,7 +2463,7 @@ onMounted(() => {
                     <RefreshCw class="w-4 h-4" /> Trocar Foto
                   </button>
                   <button
-                    @click="imagePreview = null"
+                    @click="imagePreview = null; photoFile = null"
                     class="px-4 py-2 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-medium hover:bg-rose-500/30 border border-rose-500/30 flex items-center gap-1.5"
                   >
                     <X class="w-4 h-4" /> Remover
