@@ -162,21 +162,12 @@ export async function uploadServicePhoto(file: File): Promise<string> {
 }
 
 export async function analyzeWithAI(imageBase64: string | undefined, category: string, notes: string): Promise<AIAnalysis> {
-  const response = await fetch('/api/analyze-service', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      imageBase64,
-      category,
-      notes,
-    }),
+  const { data, error } = await insforge.functions.invoke('analyze-service', {
+    body: { imageBase64, category, notes },
   })
 
-  if (!response.ok) {
-    throw new Error('Erro na comunicação com a IA')
-  }
-
-  return response.json()
+  if (error) throw error
+  return data as AIAnalysis
 }
 
 export async function updateProfessionalPlan(
@@ -250,23 +241,22 @@ export async function canCreateRequest(professionalId: string): Promise<{ allowe
 }
 
 export async function createPortalSession(professionalId: string): Promise<{ url: string }> {
-  const response = await fetch('/api/create-portal-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ professionalId }),
+  const returnUrl = `${window.location.origin}/perfil_pro`
+  const { data, error } = await insforge.payments.stripe.createCustomerPortalSession('test', {
+    subject: { type: 'professional', id: professionalId },
+    returnUrl,
   })
-  if (!response.ok) throw new Error('Erro ao criar sessao do portal')
-  return response.json()
+  if (error) throw error
+  if (!data?.customerPortalSession?.url) throw new Error('Erro ao criar sessao do portal')
+  return { url: data.customerPortalSession.url }
 }
 
 export async function changePlan(professionalId: string, targetPlan: string): Promise<{ subscriptionId: string; status: string }> {
-  const response = await fetch('/api/change-plan', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ professionalId, targetPlan }),
+  const { data, error } = await insforge.functions.invoke('change-plan', {
+    body: { professionalId, targetPlan },
   })
-  if (!response.ok) throw new Error('Erro ao alterar plano')
-  return response.json()
+  if (error) throw error
+  return data as { subscriptionId: string; status: string }
 }
 
 export async function getSubscriptionStatus(professionalId: string): Promise<{
@@ -277,22 +267,51 @@ export async function getSubscriptionStatus(professionalId: string): Promise<{
   planExpiresAt: string | null
   stripeCustomerId: string | null
 }> {
-  const response = await fetch(`/api/subscription-status/${professionalId}`)
-  if (!response.ok) throw new Error('Erro ao buscar status da assinatura')
-  return response.json()
+  const { data, error } = await insforge.database
+    .from('professionals')
+    .select('plan, plan_status, requests_this_month, requests_reset_at, plan_expires_at, stripe_customer_id')
+    .eq('id', professionalId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new Error('Professional not found')
+
+  const now = new Date()
+  const resetAt = data.requests_reset_at ? new Date(data.requests_reset_at) : null
+  const needsReset = !resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear()
+
+  return {
+    plan: data.plan,
+    status: data.plan_status,
+    requestsThisMonth: needsReset ? 0 : data.requests_this_month || 0,
+    requestLimit: data.plan === 'ouro' ? null : data.plan === 'prata' ? 30 : data.plan === 'bronze' ? 10 : 0,
+    planExpiresAt: data.plan_expires_at,
+    stripeCustomerId: data.stripe_customer_id,
+  }
 }
 
 export async function createCheckoutSession(professionalId: string, plan: string, email: string): Promise<{ url: string }> {
-  const response = await fetch('/api/create-checkout-session', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ professionalId, plan, email }),
+  const { data: planData, error: planError } = await insforge.database
+    .from('plans')
+    .select('stripe_price_id')
+    .eq('id', plan)
+    .maybeSingle()
+  if (planError) throw planError
+  if (!planData?.stripe_price_id) throw new Error('Price ID not configured')
+
+  const successUrl = `${window.location.origin}/?session_id={CHECKOUT_SESSION_ID}`
+  const cancelUrl = `${window.location.origin}/?canceled=true`
+  const { data, error } = await insforge.payments.stripe.createCheckoutSession('test', {
+    mode: 'subscription',
+    lineItems: [{ priceId: planData.stripe_price_id, quantity: 1 }],
+    successUrl,
+    cancelUrl,
+    subject: { type: 'professional', id: professionalId },
+    customerEmail: email,
+    metadata: { professional_id: professionalId, plan },
   })
-  if (!response.ok) {
-    const data = await response.json().catch(() => null)
-    throw new Error(data?.error || 'Erro ao criar sessao de checkout')
-  }
-  return response.json()
+  if (error) throw error
+  if (!data?.checkoutSession?.url) throw new Error('Erro ao criar sessao de checkout')
+  return { url: data.checkoutSession.url }
 }
 
 export async function getPlans(): Promise<Plan[]> {
@@ -347,6 +366,10 @@ export async function signOutAuth(): Promise<void> {
 }
 
 export async function getCurrentAuthUser(): Promise<AuthUser | null> {
+  const hasSessionCookie =
+    typeof document !== 'undefined' &&
+    document.cookie.split(';').some((c) => c.trim().startsWith('insforge_csrf_token='))
+  if (!hasSessionCookie) return null
   const { data, error } = await insforge.auth.getCurrentUser()
   if (error) return null
   if (!data?.user) return null
