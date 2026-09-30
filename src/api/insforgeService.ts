@@ -108,9 +108,9 @@ export async function updateProfessional(id: string, updates: Partial<Profession
   return data as Professional
 }
 
-export async function uploadProfessionalAvatar(file: File): Promise<string> {
+export async function uploadProfessionalAvatar(file: File, ownerId: string): Promise<string> {
   const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '_').slice(-60) || 'avatar'
-  const key = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`
+  const key = `${ownerId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`
   const delays = [500, 1200, 2500]
   let lastErr: unknown
   for (let attempt = 0; attempt <= delays.length; attempt++) {
@@ -137,9 +137,9 @@ function isTransientUploadError(err: unknown): boolean {
   return /Slow Down|503|500|502|504|network|timeout|fetch failed/i.test(msg)
 }
 
-export async function uploadServicePhoto(file: File): Promise<string> {
+export async function uploadServicePhoto(file: File, ownerId: string): Promise<string> {
   const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '_').slice(-60) || 'photo'
-  const key = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`
+  const key = `${ownerId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`
   const delays = [500, 1200, 2500]
   let lastErr: unknown
   for (let attempt = 0; attempt <= delays.length; attempt++) {
@@ -161,13 +161,75 @@ export async function uploadServicePhoto(file: File): Promise<string> {
   throw lastErr instanceof Error ? lastErr : new Error('Upload failed')
 }
 
-export async function analyzeWithAI(imageBase64: string | undefined, category: string, notes: string): Promise<AIAnalysis> {
+// Reduz a foto para ~1280px JPEG antes de enviar: foto original do celular
+// (MBs em base64) estourava o timeout de 30s no upload + inferência do modelo vision.
+async function downscaleDataUrl(dataUrl: string, maxDim = 1024, quality = 0.75, force = false): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image()
+    el.onload = () => resolve(el)
+    el.onerror = () => reject(new Error('decode'))
+    el.src = dataUrl
+  })
+  const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
+  if (scale === 1 && !force) return dataUrl
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return dataUrl
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
+// Garante payload pequeno: reduz iterativamente até caber no teto.
+// Sem isso, o POST com a foto original morre no transporte (timeout/fetch-failed)
+// e nem chega a aparecer nos logs da function.
+async function fitPayload(dataUrl: string, maxBytes = 500 * 1024): Promise<string> {
+  let dim = 1024
+  let quality = 0.75
+  let out = dataUrl
+  for (let i = 0; i < 4; i++) {
+    out = await downscaleDataUrl(dataUrl, dim, quality, true)
+    if (out.length <= maxBytes) return out
+    dim = Math.round(dim * 0.7)
+    quality = Math.max(0.5, quality - 0.1)
+  }
+  return out
+}
+
+export interface AnalyzeResponse {
+  status: 'ready' | 'processing' | 'error'
+  analysis: AIAnalysis
+  analysisId: string | null
+}
+
+export async function analyzeWithAI(imageBase64: string | undefined, category: string, notes: string): Promise<AnalyzeResponse> {
+  let payload = imageBase64
+  if (payload?.startsWith('data:')) {
+    try {
+      payload = await fitPayload(payload)
+      console.debug('[analyze] payload KB:', Math.round((payload.length / 1024)))
+    } catch {
+      // mantém o original se o downscale falhar
+    }
+  }
   const { data, error } = await insforge.functions.invoke('analyze-service', {
-    body: { imageBase64, category, notes },
+    body: { imageBase64: payload, category, notes },
   })
 
   if (error) throw error
-  return data as AIAnalysis
+  return data as AnalyzeResponse
+}
+
+export async function getAnalysisResult(analysisId: string): Promise<{ status: string; result: AIAnalysis | null }> {
+  const { data, error } = await insforge.database
+    .from('service_analyses')
+    .select('status, result')
+    .eq('id', analysisId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return { status: 'error', result: null }
+  return { status: (data as { status: string }).status, result: (data as { result: AIAnalysis | null }).result }
 }
 
 export async function updateProfessionalPlan(
@@ -279,11 +341,18 @@ export async function getSubscriptionStatus(professionalId: string): Promise<{
   const resetAt = data.requests_reset_at ? new Date(data.requests_reset_at) : null
   const needsReset = !resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear()
 
+  // Limite lido da tabela plans (fonte única) — request_limit NULL = ilimitado
+  const { data: planRow } = await insforge.database
+    .from('plans')
+    .select('request_limit')
+    .eq('id', data.plan)
+    .maybeSingle()
+
   return {
     plan: data.plan,
     status: data.plan_status,
     requestsThisMonth: needsReset ? 0 : data.requests_this_month || 0,
-    requestLimit: data.plan === 'ouro' ? null : data.plan === 'prata' ? 30 : data.plan === 'bronze' ? 10 : 0,
+    requestLimit: planRow ? (planRow.request_limit as number | null) : 0,
     planExpiresAt: data.plan_expires_at,
     stripeCustomerId: data.stripe_customer_id,
   }

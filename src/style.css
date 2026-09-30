@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+:root {
+  --gold-1: #f59e0b;
+  --gold-2: #facc15;
+  --ink: #020617;
+}
+
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #020617; }
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -12,11 +21,184 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes carousel {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes kenburns {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.12) translate(-1.5%, -1.5%); }
+}
+@keyframes shine {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(240%) skewX(-18deg); }
+}
+@keyframes glow-pan {
+  0%, 100% { opacity: .55; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(2%); }
+}
+
 .animate-float { animation: float 4s ease-in-out infinite; }
 .animate-pulse-slow { animation: pulse-slow 4s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 14s linear infinite; }
+.animate-marquee { animation: marquee 28s linear infinite; }
+.animate-marquee:hover { animation-play-state: paused; }
+.animate-carousel { animation: carousel 30s linear infinite; }
+.animate-carousel:hover { animation-play-state: paused; }
+.animate-kenburns { animation: kenburns 18s ease-in-out infinite alternate; }
 
 .text-stroke-amber {
   -webkit-text-stroke: 1px rgba(251, 191, 36, 0.25);
   color: transparent;
+}
+
+/* Glassmorphism premium */
+.glass {
+  background: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.03));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.glass-strong {
+  background: linear-gradient(135deg, rgba(15,23,42,.85), rgba(15,23,42,.65));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(251,191,36,.18);
+}
+.tilt-3d { transform-style: preserve-3d; will-change: transform; }
+.tilt-inner { transform: translateZ(30px); }
+
+/* Cursor iluminação dinâmica */
+#cursor-glow {
+  position: fixed;
+  width: 520px; height: 520px;
+  left: 0; top: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(circle, rgba(251,191,36,.14) 0%, rgba(251,191,36,.05) 35%, transparent 65%);
+  transform: translate(-50%, -50%);
+  transition: opacity .3s ease;
+}
+@media (hover: none), (pointer: coarse) {
+  #cursor-glow { display: none; }
+}
+
+/* Hero cinematográfico */
+.hero-cine::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to top, #020617 4%, transparent 35%),
+    linear-gradient(to bottom, rgba(2,6,23,.72), rgba(2,6,23,.25) 45%, rgba(2,6,23,.65)),
+    radial-gradient(ellipse at 50% 20%, rgba(251,191,36,.18), transparent 60%);
+  pointer-events: none;
+}
+.hero-grain::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: .07;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+  animation: shine 3.2s ease-in-out infinite;
+}
+
+/* FAQ animado */
+.faq-panel {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .45s cubic-bezier(.4,0,.2,1);
+}
+.faq-panel.open { grid-template-rows: 1fr; }
+.faq-inner { overflow: hidden; }
+
+/* Reveal padrão (GSAP complementa) */
+.reveal { opacity: 0; transform: translateY(28px); }
+.reveal.in { opacity: 1; transform: none; transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
+
+/* SVG animado */
+.svg-draw { stroke-dasharray: 320; stroke-dashoffset: 320; transition: stroke-dashoffset 1.4s ease; }
+.in .svg-draw, .reveal.in .svg-draw { stroke-dashoffset: 0; }
+
+/* Tesla stack fullscreen */
+.tesla-stack { scroll-snap-type: y proximity; }
+.tesla-section {
+  min-height: 100vh;
+  min-height: 100svh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.tesla-media { position: absolute; inset: 0; }
+.tesla-media img, .tesla-media video { width: 100%; height: 100%; object-fit: cover; }
+/* Hero mais baixo + fachada enquadrada no nome da loja */
+.tesla-section-hero { min-height: 66vh; min-height: 66svh; }
+.tesla-media-hero img, .tesla-media-hero video { object-position: center 22%; }
+.tesla-media-obra img { object-fit: cover; object-position: center; }
+.tesla-media-obra::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top, rgba(2,6,23,.55) 10%, transparent 55%);
+}
+.tesla-overlay-hero {
+  background:
+    linear-gradient(to bottom, rgba(2,6,23,.42) 0%, rgba(2,6,23,.12) 32%, rgba(2,6,23,.18) 60%, rgba(2,6,23,.78) 100%);
+}
+@media (max-width: 640px) {
+  .tesla-section-hero { min-height: 72vh; min-height: 72svh; }
+  .tesla-media-hero img, .tesla-media-hero video { object-position: center 28%; }
+}
+.tesla-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(2,6,23,.55) 0%, rgba(2,6,23,.15) 30%, rgba(2,6,23,.15) 60%, rgba(2,6,23,.72) 100%);
+}
+.tesla-title { font-weight: 500; letter-spacing: 0; }
+.tesla-cta-primary {
+  background: #f59e0b; color: #020617;
+  transition: all .33s cubic-bezier(.4,0,.2,1);
+}
+.tesla-cta-primary:hover { background: #fbbf24; }
+.tesla-cta-secondary {
+  background: rgba(255,255,255,.12); color: #fff;
+  border: 1px solid rgba(255,255,255,.35);
+  backdrop-filter: blur(8px);
+  transition: all .33s cubic-bezier(.4,0,.2,1);
+}
+.tesla-cta-secondary:hover { background: rgba(255,255,255,.22); }
+.tesla-dot { transition: all .33s cubic-bezier(.4,0,.2,1); }
+/* Cards divididos: sem foto fullscreen, imagem contida */
+.tesla-card-split { scroll-margin-top: 96px; }
+/* Respiro entre módulos do stack */
+.tesla-stack > section + section,
+.tesla-stack > div + section,
+.tesla-stack > section + div,
+.tesla-stack > div + div { margin-top: 2.5rem; }
+@media (min-width: 640px) {
+  .tesla-stack > section + section,
+  .tesla-stack > div + section,
+  .tesla-stack > section + div,
+  .tesla-stack > div + div { margin-top: 4rem; }
+}
+
+/* Acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+  .animate-kenburns { animation: none; }
+  .tesla-stack { scroll-snap-type: none; }
 }

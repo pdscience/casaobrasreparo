@@ -23,6 +23,9 @@ export interface Professional {
   avatar: string
   pix_key: string
   bio: string
+  coverage_bairros: string[]
+  cidade: string
+  uf: string
   plan: 'gratuito' | 'bronze' | 'prata' | 'ouro'
   plan_status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid'
   stripe_customer_id: string | null

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { trackEvent, buildWhatsAppLink, getWhatsAppNumber } from './lib/analytics'
 import {
   Wrench,
   Camera,
@@ -45,6 +48,7 @@ import {
   FileCheck,
   Receipt,
   Handshake,
+  History,
   Newspaper,
   Lightbulb,
   Hammer,
@@ -56,10 +60,28 @@ import {
   LogIn,
   LogOut,
   LayoutDashboard,
+  ChevronDown,
+  BadgeCheck,
+  Flame,
+  Trees,
+  Refrigerator,
+  Sofa,
+  Tv,
+  Layers,
+  Grid2x2,
+  Fence,
+  Home,
+  Gem,
+  LayoutGrid,
+  Bug,
+  Paintbrush,
+  Monitor,
 } from 'lucide-vue-next'
-import type { AIAnalysis, Professional, ServiceRequest, Plan } from './types'
+import type { AIAnalysis, Professional, ServiceRequest, Plan, User as UserProfile } from './types'
 import { analyzeWithAI, getServiceRequests, createServiceRequest, updateServiceRequest, getProfessionals, createProfessional, updateProfessional, getProfessionalByAuthId, uploadProfessionalAvatar, uploadServicePhoto, createPortalSession, changePlan, createCheckoutSession, getPlans, signUpAuth, signInAuth, signOutAuth, getCurrentAuthUser, getUserByAuthId, createUserRecord } from './api/insforgeService'
 import ProfessionalCard from './components/ProfessionalCard.vue'
+import ProfileEditModal from './components/ProfileEditModal.vue'
+import { validateQuoteForm, buildQuotePayload, type SendMode } from './lib/quoteFlow'
 
 const CATEGORIES = [
   { name: 'Eletricista', icon: Zap, gradient: 'from-amber-600 to-yellow-500', accent: 'text-amber-300', img: 'https://images.pexels.com/photos/257736/pexels-photo-257736.jpeg?auto=compress&cs=tinysrgb&w=400' },
@@ -70,6 +92,22 @@ const CATEGORIES = [
   { name: 'Pedreiro / Reformas', icon: ShieldCheck, gradient: 'from-stone-600 to-stone-400', accent: 'text-stone-300', img: 'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=400' },
   { name: 'Chaveiro', icon: Sliders, gradient: 'from-purple-600 to-violet-500', accent: 'text-purple-300', img: 'https://images.pexels.com/photos/101808/pexels-photo-101808.jpeg?auto=compress&cs=tinysrgb&w=400' },
   { name: 'Limpeza Geral', icon: ThumbsUp, gradient: 'from-rose-500 to-pink-400', accent: 'text-rose-300', img: 'https://images.pexels.com/photos/5591860/pexels-photo-5591860.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Gás', icon: Flame, gradient: 'from-red-600 to-orange-500', accent: 'text-red-300', img: 'https://images.pexels.com/photos/3722212/pexels-photo-3722212.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Jardinagem', icon: Trees, gradient: 'from-green-600 to-emerald-500', accent: 'text-green-300', img: 'https://images.pexels.com/photos/38936344/pexels-photo-38936344.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Eletrodomésticos', icon: Refrigerator, gradient: 'from-sky-600 to-blue-500', accent: 'text-sky-300', img: 'https://images.pexels.com/photos/34734504/pexels-photo-34734504.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Montagem de Móveis', icon: Sofa, gradient: 'from-indigo-600 to-violet-500', accent: 'text-indigo-300', img: 'https://images.pexels.com/photos/4554417/pexels-photo-4554417.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Instalação de TV', icon: Tv, gradient: 'from-slate-600 to-sky-600', accent: 'text-sky-300', img: 'https://images.pexels.com/photos/6020432/pexels-photo-6020432.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Gesso e Drywall', icon: Layers, gradient: 'from-slate-500 to-zinc-400', accent: 'text-slate-300', img: 'https://images.pexels.com/photos/4981812/pexels-photo-4981812.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Vidros e Espelhos', icon: Grid2x2, gradient: 'from-teal-500 to-sky-400', accent: 'text-teal-300', img: 'https://images.pexels.com/photos/3615723/pexels-photo-3615723.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Grades e Portões', icon: Fence, gradient: 'from-neutral-600 to-zinc-400', accent: 'text-neutral-300', img: 'https://images.pexels.com/photos/13278911/pexels-photo-13278911.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Telhado e Calhas', icon: Home, gradient: 'from-red-500 to-rose-400', accent: 'text-red-300', img: 'https://images.pexels.com/photos/38524253/pexels-photo-38524253.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Impermeabilização', icon: Droplets, gradient: 'from-blue-500 to-indigo-500', accent: 'text-blue-300', img: 'https://images.pexels.com/photos/39238328/pexels-photo-39238328.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Marmoraria', icon: Gem, gradient: 'from-purple-500 to-fuchsia-400', accent: 'text-purple-300', img: 'https://images.pexels.com/photos/14225905/pexels-photo-14225905.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Azulejista', icon: LayoutGrid, gradient: 'from-slate-500 to-cyan-600', accent: 'text-cyan-300', img: 'https://images.pexels.com/photos/8293686/pexels-photo-8293686.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Controle de Pragas', icon: Bug, gradient: 'from-lime-600 to-green-600', accent: 'text-lime-300', img: 'https://images.pexels.com/photos/19789837/pexels-photo-19789837.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Limpeza Pós-Obra', icon: Paintbrush, gradient: 'from-pink-500 to-rose-400', accent: 'text-pink-300', img: 'https://images.pexels.com/photos/3616735/pexels-photo-3616735.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Marido de Aluguel', icon: Hammer, gradient: 'from-yellow-600 to-lime-500', accent: 'text-yellow-300', img: 'https://images.pexels.com/photos/17063686/pexels-photo-17063686.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Informática', icon: Monitor, gradient: 'from-violet-600 to-indigo-500', accent: 'text-violet-300', img: 'https://images.pexels.com/photos/10558599/pexels-photo-10558599.jpeg?auto=compress&cs=tinysrgb&w=400' },
 ]
 
 const statusSteps = ['Pendente', 'Visita Agendada', 'Em Execução', 'Concluído']
@@ -77,11 +115,14 @@ const statusSteps = ['Pendente', 'Visita Agendada', 'Em Execução', 'Concluído
 const userMode = computed<'client' | 'pro' | null>(() => userProfile.value?.role ?? null)
 const activeTab = ref<string>('boas_vindas')
 
+const CATEGORY_UNLISTED = 'Serviço que não está na lista'
+
 const contactForm = ref({
   name: '',
   email: '',
   phone: '',
   category: '',
+  categoryOther: '',
   subject: '',
   message: '',
 })
@@ -91,29 +132,176 @@ const contactSuccess = ref(false)
 const handleContactSubmit = () => {
   contactSubmitting.value = true
   const { name, email, phone, category, subject, message } = contactForm.value
-  const body = [
-    `Olá! vim pelo site Casa Obras e Reparos.`,
-    '',
+  const isUnlisted = category === CATEGORY_UNLISTED
+  const categoryLine = isUnlisted
+    ? `Categoria: ${contactForm.value.categoryOther} (sugerida — ainda não está na lista)`
+    : category ? `Categoria: ${category}` : ''
+  // Experiência sem sair da página: abre WhatsApp em nova aba + mantém toast
+  const waMessage = [
+    `Olá! Vim pelo site Casa Obras e Reparos.`,
+    ``,
     `Nome: ${name}`,
     `E-mail: ${email}`,
     phone ? `Telefone: ${phone}` : '',
-    category ? `Categoria: ${category}` : '',
-    '',
+    categoryLine,
+    subject ? `Assunto: ${subject}` : '',
+    ``,
     `Mensagem: ${message}`,
-    '',
-    '---',
-    `Assunto: ${subject}`,
   ].filter(Boolean).join('\n')
 
-  const mailtoLink = `mailto:casaobrasereparos@gmail.com?subject=${encodeURIComponent(subject || 'Contato via site')}&body=${encodeURIComponent(body)}`
-  window.location.href = mailtoLink
+  trackEvent('lead_whatsapp', { category: isUnlisted ? 'categoria_sugerida' : (category || 'geral'), subject: subject || '' })
+  try {
+    window.open(buildWhatsAppLink(waMessage, getWhatsAppNumber()), '_blank', 'noopener')
+  } catch { /* noop */ }
 
   setTimeout(() => {
     contactSubmitting.value = false
     contactSuccess.value = true
-    contactForm.value = { name: '', email: '', phone: '', category: '', subject: '', message: '' }
-    setTimeout(() => { contactSuccess.value = false }, 5000)
+    contactForm.value = { name: '', email: '', phone: '', category: '', categoryOther: '', subject: '', message: '' }
+    setTimeout(() => { contactSuccess.value = false }, 6000)
   }, 500)
+}
+
+// ---------- Landing premium (página única) ----------
+const isLanding = computed(() =>
+  !authUser.value && ['boas_vindas', 'como_funciona', 'para_profissionais', 'contato', 'blog'].includes(activeTab.value)
+)
+const heroVideoUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_HERO_VIDEO_URL || ''
+const openFaq = ref<number | null>(0)
+function planLimitText(id: string, fallback: string): string {
+  const row = planMap.value.get(id)
+  if (!row) return fallback
+  return row.request_limit === null ? 'ilimitados' : `${row.request_limit}/mês`
+}
+const faqs = computed(() => [
+  { q: 'Como funciona o orçamento com IA?', a: 'Você envia uma foto do problema, escolhe a categoria e a IA gera diagnóstico, materiais, tempo estimado e faixa de preço. Depois você envia para profissionais Ouro ou para toda a base.' },
+  { q: 'Preciso pagar para pedir um orçamento?', a: 'Não. Cliente não paga nada para solicitar. Você só combina o valor diretamente com o profissional via WhatsApp.' },
+  { q: 'Como o profissional recebe meus pedidos?', a: 'Profissionais assinantes (Bronze, Prata e Ouro) veem os chamados da sua categoria em tempo real, com foto e análise da IA. O plano Ouro ainda recebe contato direto individual.' },
+  { q: 'O que muda entre Bronze, Prata e Ouro?', a: `Bronze (${dbPlanPrice('bronze', 'R$34,90')}): ${planLimitText('bronze', '10/mês')} pedidos. Prata (${dbPlanPrice('prata', 'R$54,90')}): ${planLimitText('prata', '30/mês')} pedidos, WhatsApp visível e prioridade. Ouro (${dbPlanPrice('ouro', 'R$79,90')}): pedidos ${planLimitText('ouro', 'ilimitados')}, topo do catálogo, selo verificado e relatórios avançados.` },
+  { q: 'Como falo com vocês?', a: 'Use o formulário abaixo — ele abre o WhatsApp da Casa Obras e Reparos com sua mensagem pronta, sem sair da experiência.' },
+])
+const partnerLogos = ['Eletricistas PRO', 'Hidráulica Prime', 'Pinturas & Cia', 'ClimaFrio', 'Marcenaria Alto Padrão', 'Reforma Fácil', 'Chave Ouro 24h', 'Limpa Total']
+
+// Tesla stack: seções fullscreen + nav flutuante + dots
+const isScrolled = ref(false)
+const activeSection = ref('inicio')
+const teslaSections = [
+  { id: 'inicio', label: 'Início' },
+  { id: 'servicos-eletrica', label: 'Elétrica & Hidráulica' },
+  { id: 'servicos-reforma', label: 'Pintura & Reformas' },
+  { id: 'contato', label: 'Contato' },
+]
+function onPageScroll() {
+  isScrolled.value = window.scrollY > 24
+  // dots: acha seção mais visível
+  let current = 'inicio'
+  for (const s of teslaSections) {
+    const el = document.getElementById(s.id)
+    if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) current = s.id
+  }
+  activeSection.value = current
+}
+
+const PROFESSIONALS_ROUTE = '#/profissionais'
+
+function scrollToId(id: string) {
+  activeTab.value = 'boas_vindas'
+  nextTick(() => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+function openProfessionalsPage() {
+  activeTab.value = 'profissionais'
+  window.scrollTo({ top: 0 })
+}
+
+watch(activeTab, (tab) => {
+  const shouldHaveRoute = tab === 'profissionais'
+  const hasRoute = window.location.hash === PROFESSIONALS_ROUTE
+  if (shouldHaveRoute && !hasRoute) {
+    window.history.pushState({ tab: 'profissionais' }, '', PROFESSIONALS_ROUTE)
+  } else if (!shouldHaveRoute && hasRoute) {
+    window.history.replaceState({}, '', window.location.pathname + window.location.search)
+  }
+})
+
+function syncTabFromRoute() {
+  if (window.location.hash === PROFESSIONALS_ROUTE) {
+    activeTab.value = 'profissionais'
+    window.scrollTo({ top: 0 })
+  } else if (activeTab.value === 'profissionais') {
+    activeTab.value = 'boas_vindas'
+  }
+}
+
+function onRoutePopstate() {
+  syncTabFromRoute()
+}
+function trackCta(label: string) {
+  trackEvent('cta_click', { label })
+}
+function handleTilt(e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement | null
+  if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const r = el.getBoundingClientRect()
+  const rx = ((e.clientY - r.top) / r.height - 0.5) * -10
+  const ry = ((e.clientX - r.left) / r.width - 0.5) * 10
+  el.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-4px)`
+}
+function resetTilt(e: MouseEvent) {
+  const el = e.currentTarget as HTMLElement | null
+  if (el) el.style.transform = ''
+}
+
+const cursorGlow = ref<HTMLElement | null>(null)
+function onCursorMove(e: PointerEvent) {
+  if (!cursorGlow.value || e.pointerType === 'touch') return
+  cursorGlow.value.style.left = `${e.clientX}px`
+  cursorGlow.value.style.top = `${e.clientY}px`
+}
+
+let gsapCtx: { revert?: () => void } | null = null
+function initPremiumMotion() {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  // Fallback reveal via IntersectionObserver (funciona sem GSAP)
+  const els = document.querySelectorAll('.reveal')
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (en.isIntersecting) {
+        en.target.classList.add('in')
+        io.unobserve(en.target)
+      }
+    })
+  }, { threshold: 0.12 })
+  els.forEach((el) => io.observe(el))
+
+  if (reduced) {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'))
+    return
+  }
+  try {
+    gsap.registerPlugin(ScrollTrigger)
+    gsapCtx = gsap.context(() => {
+      gsap.utils.toArray<HTMLElement>('.gs-reveal').forEach((el) => {
+        gsap.fromTo(el, { y: 36, opacity: 0 }, {
+          y: 0, opacity: 1, duration: 0.9, ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        })
+      })
+      gsap.utils.toArray<HTMLElement>('[data-count]').forEach((el) => {
+        const target = Number(el.dataset.count || '0')
+        const obj = { v: 0 }
+        ScrollTrigger.create({
+          trigger: el, start: 'top 90%', once: true,
+          onEnter: () => gsap.to(obj, {
+            v: target, duration: 1.6, ease: 'power2.out',
+            onUpdate: () => { el.textContent = `${Math.round(obj.v)}${el.dataset.suffix || ''}` },
+          }),
+        })
+      })
+    })
+  } catch { /* GSAP opcional */ }
 }
 const requests = ref<ServiceRequest[]>([])
 const myRequests = computed(() =>
@@ -121,6 +309,36 @@ const myRequests = computed(() =>
     ? requests.value.filter((r) => r.client_id === authUser.value?.id)
     : []
 )
+// Filtro de acompanhamento do cliente: pendentes / em andamento / concluídas
+const clientStatusFilter = ref<'todas' | 'pendentes' | 'andamento' | 'concluidas'>('todas')
+function clientStatusGroup(status: ServiceRequest['status']): 'pendentes' | 'andamento' | 'concluidas' {
+  if (status === 'Pendente') return 'pendentes'
+  if (status === 'Concluído' || status === 'Cancelado') return 'concluidas'
+  return 'andamento'
+}
+const filteredClientRequests = computed(() =>
+  clientStatusFilter.value === 'todas'
+    ? myRequests.value
+    : myRequests.value.filter((r) => clientStatusGroup(r.status) === clientStatusFilter.value)
+)
+// Histórico (armazenados): finalizados de cada lado
+const historicClientRequests = computed(() =>
+  myRequests.value.filter((r) => r.status === 'Concluído' || r.status === 'Cancelado')
+)
+const historicProRequests = computed(() =>
+  proProfile.value.id
+    ? requests.value.filter((r) =>
+        r.professional_id === proProfile.value.id &&
+        (r.status === 'Concluído' || r.status === 'Cancelado')
+      )
+    : []
+)
+function formatRequestDate(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
 const professionals = ref<Professional[]>([])
 const proProfile = ref<Professional>({
   id: '',
@@ -133,6 +351,9 @@ const proProfile = ref<Professional>({
   avatar: '',
   pix_key: '',
   bio: '',
+  coverage_bairros: [],
+  cidade: '',
+  uf: '',
   plan: 'gratuito',
   plan_status: 'active',
   stripe_customer_id: null,
@@ -170,9 +391,10 @@ const showOnboardingPlans = ref<boolean>(false)
 
 const isEditingProfile = ref<boolean>(false)
 const isRegistering = ref<boolean>(false)
+const showProfileModal = ref<boolean>(false)
 
 const authUser = ref<{ id: string; email: string; name?: string | null } | null>(null)
-const userProfile = ref<User | null>(null)
+const userProfile = ref<UserProfile | null>(null)
 const authLoading = ref(false)
 const authError = ref('')
 const showAuth = ref(false)
@@ -304,6 +526,9 @@ async function handleRegister() {
         avatar: '',
         pix_key: '',
         bio: '',
+        coverage_bairros: [],
+        cidade: '',
+        uf: '',
         plan: 'gratuito',
         plan_status: 'active',
         stripe_customer_id: null,
@@ -346,6 +571,9 @@ async function handleLogout() {
     avatar: '',
     pix_key: '',
     bio: '',
+    coverage_bairros: [],
+    cidade: '',
+    uf: '',
     plan: 'gratuito',
     plan_status: 'active',
     stripe_customer_id: null,
@@ -354,6 +582,8 @@ async function handleLogout() {
     requests_this_month: 0,
     requests_reset_at: null,
   }
+  resetDirectoryFilters()
+  directoryPage.value = 1
   activeTab.value = 'boas_vindas'
 }
 
@@ -376,11 +606,16 @@ const visibleProfessionals = computed(() => {
     })
 })
 
-const selectedOuroProfessional = ref<Professional | null>(null)
-const ourosNoCatalogo = computed(() =>
-  visibleProfessionals.value.filter(p => planMap.value.get(p.plan)?.rank === 1)
-)
-const sendMode = ref<'broadcast' | 'ouro' | null>(null)
+const selectedProfessional = ref<Professional | null>(null)
+// Profissionais elegíveis à escolha direta na categoria atual do formulário
+const directCandidates = computed(() => {
+  const list = visibleProfessionals.value.filter(p =>
+    !selectedCategory.value || p.category === selectedCategory.value
+  )
+  return list.length > 0 ? list : visibleProfessionals.value
+})
+const sendMode = ref<SendMode | null>(null)
+const formError = ref<string>('')
 const prataBronzeCount = computed(() =>
   visibleProfessionals.value.filter(p => {
     const rank = planMap.value.get(p.plan)?.rank
@@ -388,14 +623,80 @@ const prataBronzeCount = computed(() =>
   }).length
 )
 
+function handleLandingCategory(categoryName: string) {
+  trackCta('categoria_' + categoryName)
+  filterCategory.value = categoryName
+  selectedCategory.value = CATEGORIES.some(c => c.name === categoryName) ? categoryName : selectedCategory.value
+  directoryPage.value = 1
+  if (activeTab.value !== 'profissionais') openProfessionalsPage()
+}
+
+function handleChooseProfessional(pro: Professional) {
+  trackCta('escolher_profissional_' + pro.id)
+  selectedProfessional.value = pro
+  if (pro.category) {
+    selectedCategory.value = pro.category
+    filterCategory.value = pro.category
+  }
+  sendMode.value = 'direct'
+  formError.value = ''
+  // Visitante: pede login/cadastro mas preserva a escolha; logado: vai ao formulário
+  if (!authUser.value) {
+    authRole.value = 'client'
+    authView.value = 'register'
+    authError.value = ''
+    showAuth.value = true
+    return
+  }
+  activeTab.value = 'solicitar'
+  nextTick(() => {
+    document.getElementById('solicitar-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+function clearProfessionalSelection() {
+  selectedProfessional.value = null
+  if (sendMode.value === 'direct') sendMode.value = null
+}
+
 const filterCategory = ref<string>('Todas')
 const filterPlan = ref<string>('Todos')
+const filterUf = ref<string>('Todas')
+const filterCidade = ref<string>('Todas')
+const filterBairro = ref<string>('Todos')
 const directoryPage = ref<number>(1)
 const CARDS_PER_PAGE = 12
+
+const normalizeFilter = (value: string) => value.trim().toLowerCase()
+
+function resetDirectoryFilters() {
+  filterCategory.value = 'Todas'
+  filterPlan.value = 'Todos'
+  filterUf.value = 'Todas'
+  filterCidade.value = 'Todas'
+  filterBairro.value = 'Todos'
+}
 
 const availableCategories = computed(() => {
   const cats = new Set(professionals.value.map(p => p.category).filter(Boolean))
   return ['Todas', ...Array.from(cats).sort()]
+})
+
+const availableUfs = computed(() => {
+  const ufs = new Set(professionals.value.map(p => (p.uf || '').trim().toUpperCase()).filter(Boolean))
+  return ['Todas', ...Array.from(ufs).sort()]
+})
+
+const availableCidades = computed(() => {
+  const cidades = new Set(professionals.value.map(p => (p.cidade || '').trim()).filter(Boolean))
+  return ['Todas', ...Array.from(cidades).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
+})
+
+const availableBairros = computed(() => {
+  const bairros = new Set(
+    professionals.value.flatMap(p => (p.coverage_bairros ?? []).map(b => b.trim()).filter(Boolean)),
+  )
+  return ['Todos', ...Array.from(bairros).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
 })
 
 const filteredProfessionals = computed(() => {
@@ -405,6 +706,21 @@ const filteredProfessionals = computed(() => {
   }
   if (filterPlan.value !== 'Todos') {
     list = list.filter(p => p.plan === filterPlan.value)
+  }
+  if (filterUf.value !== 'Todas') {
+    list = list.filter(p => (p.uf || '').trim().toUpperCase() === filterUf.value)
+  }
+  if (filterCidade.value !== 'Todas') {
+    list = list.filter(p => normalizeFilter(p.cidade || '') === normalizeFilter(filterCidade.value))
+  }
+  if (filterBairro.value !== 'Todos') {
+    const target = normalizeFilter(filterBairro.value)
+    list = list.filter(p => {
+      const coverage = (p.coverage_bairros ?? []).map(b => b.trim()).filter(Boolean)
+      // Sem bairro declarado o prestador atende toda a região
+      if (coverage.length === 0) return true
+      return coverage.some(b => normalizeFilter(b) === target)
+    })
   }
   return list
 })
@@ -416,7 +732,7 @@ const paginatedProfessionals = computed(() => {
   return filteredProfessionals.value.slice(start, start + CARDS_PER_PAGE)
 })
 
-watch([filterCategory, filterPlan], () => {
+watch([filterCategory, filterPlan, filterUf, filterCidade, filterBairro], () => {
   directoryPage.value = 1
 })
 
@@ -466,6 +782,28 @@ function openProfileEditor() {
   isEditingProfile.value = true
 }
 
+function handleHeaderProfileClick() {
+  if (userMode.value === 'client') {
+    showProfileModal.value = true
+    return
+  }
+  if (userMode.value === 'pro') {
+    if (proProfile.value.id) {
+      showProfileModal.value = true
+    } else {
+      activeTab.value = 'perfil_pro'
+    }
+  }
+}
+
+function handleProfileModalSaved(payload: Professional | UserProfile) {
+  if (userMode.value === 'pro') {
+    proProfile.value = { ...proProfile.value, ...(payload as Professional) }
+  } else if (payload) {
+    userProfile.value = payload as UserProfile
+  }
+}
+
 function handleAvatarUpload(e: Event) {
   const target = e.target as HTMLInputElement
   const file = target.files?.[0]
@@ -487,9 +825,14 @@ async function handleSaveProfile() {
   }
 
   try {
+    const ownerId = authUser.value?.id
     let avatarUrl = proProfile.value.avatar
     if (avatarFile.value) {
-      avatarUrl = await uploadProfessionalAvatar(avatarFile.value)
+      if (!ownerId) {
+        alert('Faça login novamente para enviar a foto do perfil.')
+        return
+      }
+      avatarUrl = await uploadProfessionalAvatar(avatarFile.value, ownerId)
     }
 
     const payload = {
@@ -499,16 +842,21 @@ async function handleSaveProfile() {
       email: editProEmail.value,
       pix_key: editProPix.value,
       bio: editProBio.value,
+      coverage_bairros: proProfile.value.coverage_bairros ?? [],
+      cidade: proProfile.value.cidade ?? '',
+      uf: proProfile.value.uf ?? '',
       avatar: avatarUrl,
-      rating: proProfile.value.rating || 0,
-      reviews_count: proProfile.value.reviews_count || 0,
     }
 
     if (proProfile.value.id) {
       await updateProfessional(proProfile.value.id, payload)
       proProfile.value = { ...proProfile.value, ...payload }
     } else {
-      const created = await createProfessional(payload)
+      if (!ownerId) {
+        alert('Faça login novamente para salvar o perfil.')
+        return
+      }
+      const created = await createProfessional({ ...payload, auth_id: ownerId })
       proProfile.value = created
     }
     isEditingProfile.value = false
@@ -517,99 +865,86 @@ async function handleSaveProfile() {
     avatarPreview.value = null
   } catch (err) {
     console.error('Erro ao salvar perfil:', err)
+    alert('Não foi possível salvar o perfil. Tente novamente.')
   }
 }
 
 async function handleConfirmOrder() {
-  if (!latestAiResult.value) return
+  if (!latestAiResult.value || !sendMode.value) return
+  formError.value = ''
+
+  // Login no fim: visitante escolhe antes, autentica ao confirmar
+  if (!authUser.value) {
+    authRole.value = 'client'
+    authView.value = 'register'
+    authError.value = ''
+    showAuth.value = true
+    return
+  }
+
+  const errors = validateQuoteForm({
+    clientName: clientName.value,
+    clientPhone: clientPhone.value,
+    clientAddress: clientAddress.value,
+  })
+  if (Object.keys(errors).length > 0) {
+    formError.value = errors.clientName || errors.clientPhone || errors.clientAddress || 'Verifique os dados.'
+    return
+  }
+
+  if (sendMode.value === 'direct' && !selectedProfessional.value) {
+    formError.value = 'Escolha um profissional para envio direto.'
+    return
+  }
 
   let photoUrl = imagePreview.value || ''
   if (photoFile.value) {
     try {
-      photoUrl = await uploadServicePhoto(photoFile.value)
+      photoUrl = await uploadServicePhoto(photoFile.value, authUser.value.id)
     } catch (err) {
       console.error('Erro ao enviar foto:', err)
     }
   }
 
-  if (sendMode.value === 'broadcast') {
-    const newOrder: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'> = {
-      client_id: authUser.value?.id ?? null,
-      client_name: clientName.value || 'Cliente',
-      client_phone: clientPhone.value || '',
-      client_address: clientAddress.value || '',
-      category: selectedCategory.value,
-      photo_url: photoUrl,
-      notes: notes.value || '',
-      ai_analysis: latestAiResult.value,
-      status: 'Pendente',
-      professional_id: null,
-      broadcast: true,
-      agendamento: null,
-      final_price: latestAiResult.value.suggestedMinPrice || null,
-      receipt_issued: false,
-      rating: null,
-    }
+  const payload = buildQuotePayload({
+    clientId: authUser.value?.id ?? null,
+    form: { clientName: clientName.value, clientPhone: clientPhone.value, clientAddress: clientAddress.value },
+    category: selectedCategory.value,
+    photoUrl,
+    notes: notes.value || '',
+    aiAnalysis: latestAiResult.value,
+    finalPrice: latestAiResult.value.suggestedMinPrice || null,
+    sendMode: sendMode.value,
+    professionalId: selectedProfessional.value?.id ?? null,
+  })
+  const newOrder = payload as unknown as Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'>
 
-    try {
-      const created = await createServiceRequest(newOrder)
-      requests.value = [created, ...requests.value]
-      resetForm()
-      activeTab.value = 'meus_pedidos'
-    } catch (err) {
-      console.error('Erro ao criar pedido:', err)
-      alert(`Não foi possível enviar o pedido. ${err instanceof Error ? err.message : 'Erro de conexão com o servidor.'}`)
-    }
-    return
-  }
+  try {
+    const created = await createServiceRequest(newOrder)
+    requests.value = [created, ...requests.value]
 
-  if (sendMode.value === 'ouro') {
-    if (!selectedOuroProfessional.value) {
-      alert('Selecione um profissional ouro antes de enviar.')
-      return
-    }
-
-    const pro = selectedOuroProfessional.value
-    const newOrder: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'> = {
-      client_id: authUser.value?.id ?? null,
-      client_name: clientName.value || 'Cliente',
-      client_phone: clientPhone.value || '',
-      client_address: clientAddress.value || '',
-      category: selectedCategory.value,
-      photo_url: photoUrl,
-      notes: notes.value || '',
-      ai_analysis: latestAiResult.value,
-      status: 'Pendente',
-      professional_id: pro.id,
-      broadcast: false,
-      agendamento: null,
-      final_price: latestAiResult.value.suggestedMinPrice || null,
-      receipt_issued: false,
-      rating: null,
-    }
-
-    try {
-      const created = await createServiceRequest(newOrder)
-      requests.value = [created, ...requests.value]
-
+    if (sendMode.value === 'direct' && selectedProfessional.value?.phone) {
+      const pro = selectedProfessional.value
       const msg = `Olá ${pro.name}! Vi seu perfil na Casa Obra e Reparos.\n\nPreciso de um serviço de *${selectedCategory.value}*.\n${latestAiResult.value!.description}\n\nPode me enviar uma proposta?`
       const cleanPhone = pro.phone.replace(/\D/g, '')
       const formattedPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone
       window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank')
-
-      resetForm()
-      activeTab.value = 'meus_pedidos'
-    } catch (err) {
-      console.error('Erro ao criar pedido:', err)
-      alert(`Não foi possível enviar o pedido. ${err instanceof Error ? err.message : 'Erro de conexão com o servidor.'}`)
     }
+
+    resetForm()
+    activeTab.value = 'meus_pedidos'
+  } catch (err) {
+    console.error('Erro ao criar pedido:', err)
+    formError.value = `Não foi possível enviar o pedido. ${err instanceof Error ? err.message : 'Erro de conexão com o servidor.'}`
   }
 }
 
 function resetForm() {
   latestAiResult.value = null
-  selectedOuroProfessional.value = null
+  aiReadyToast.value = false
+  selectedProfessional.value = null
   sendMode.value = null
+  formError.value = ''
   imagePreview.value = null
   photoFile.value = null
   notes.value = ''
@@ -623,8 +958,13 @@ async function handleSaveSchedule() {
   if (!scheduleModal.value) return
 
   try {
+    // Ao assumir (agendar) um broadcast sem dono, o pedido passa a ser deste profissional
+    const assumeOwner = !scheduleModal.value.professional_id && proProfile.value.id
+      ? { professional_id: proProfile.value.id }
+      : {}
     await updateServiceRequest(scheduleModal.value.id, {
       status: 'Visita Agendada',
+      ...assumeOwner,
       agendamento: {
         data: scheduleDate.value || new Date().toISOString().split('T')[0],
         hora: scheduleTime.value || '14:00',
@@ -636,6 +976,7 @@ async function handleSaveSchedule() {
     scheduleModal.value = null
   } catch (err) {
     console.error('Erro ao agendar:', err)
+    alert('Não foi possível agendar a visita. Tente novamente.')
   }
 }
 
@@ -644,13 +985,19 @@ async function handleUpdateStatus(orderId: string, newStatus: ServiceRequest['st
     const req = requests.value.find((r) => r.id === orderId)
     if (!req) return
 
+    // Garante dono ao avançar um broadcast sem dono (histórico do pro depende disso)
+    const assumeOwner = !req.professional_id && proProfile.value.id
+      ? { professional_id: proProfile.value.id }
+      : {}
     await updateServiceRequest(orderId, {
       status: newStatus,
+      ...assumeOwner,
       receipt_issued: newStatus === 'Concluído' ? true : req.receipt_issued,
     })
     await loadData()
   } catch (err) {
     console.error('Erro ao atualizar status:', err)
+    alert('Não foi possível atualizar o status do pedido. Tente novamente.')
   }
 }
 
@@ -671,6 +1018,7 @@ async function handleSaveRating() {
     ratingComment.value = ''
   } catch (err) {
     console.error('Erro ao salvar avaliação:', err)
+    alert('Não foi possível salvar a avaliação. Tente novamente.')
   }
 }
 
@@ -726,6 +1074,8 @@ function handlePhotoUpload(e: Event) {
   }
 }
 
+const aiReadyToast = ref(false)
+
 async function handleAnalyzeWithAI() {
   if (!imagePreview.value) {
     alert('Por favor, tire ou selecione uma foto antes de solicitar a análise da IA.')
@@ -734,14 +1084,19 @@ async function handleAnalyzeWithAI() {
 
   isAnalyzing.value = true
   latestAiResult.value = null
+  aiReadyToast.value = false
 
   try {
-    const data = await analyzeWithAI(
+    const res = await analyzeWithAI(
       imagePreview.value.startsWith('data:') ? imagePreview.value : undefined,
       selectedCategory.value,
       notes.value
     )
-    latestAiResult.value = data
+    latestAiResult.value = res.analysis
+    // Sem polling: a IA real não cabe nos 30s do proxy de forma confiável;
+    // quando ela responder a tempo (status ready) o resultado já vem completo.
+      aiReadyToast.value = res.status === 'ready' && (res.analysis.suggestedMinPrice > 0 || res.analysis.suggestedMaxPrice > 0)
+    if (aiReadyToast.value) setTimeout(() => { aiReadyToast.value = false }, 6000)
   } catch (err) {
     console.error(err)
     latestAiResult.value = {
@@ -854,14 +1209,19 @@ const revenueChartOption = computed(() => ({
   ],
 }))
 
+const currentPlanRow = computed(() => planMap.value.get(proProfile.value.plan) ?? null)
+
 const planFeatures = computed(() => {
   const plan = proProfile.value.plan
+  const row = currentPlanRow.value
+  // Limites e visibilidade vêm da tabela plans (fonte única); request_limit NULL = ilimitado
+  const maxRequests = row ? (row.request_limit === null ? Infinity : row.request_limit) : 0
   return {
-    maxRequests: plan === 'ouro' ? Infinity : plan === 'prata' ? 30 : plan === 'bronze' ? 10 : 0,
+    maxRequests,
     prioritySearch: plan === 'ouro' || plan === 'prata',
     verifiedBadge: plan === 'ouro',
     advancedReports: plan === 'ouro',
-    whatsappVisible: plan === 'prata' || plan === 'ouro',
+    whatsappVisible: row ? row.show_whatsapp_to_client : false,
     isGratuito: plan === 'gratuito',
     isBronze: plan === 'bronze',
     isPrata: plan === 'prata',
@@ -881,7 +1241,7 @@ const requestUsage = computed(() => {
   }
 })
 
-const canReceiveRequests = computed(() => proProfile.value.plan !== 'gratuito')
+const canReceiveRequests = computed(() => currentPlanRow.value?.receives_broadcasts ?? proProfile.value.plan !== 'gratuito')
 
 const proRequests = computed(() => {
   if (!canReceiveRequests.value) return []
@@ -911,17 +1271,49 @@ const PLAN_LABELS: Record<string, string> = {
   ouro: 'Ouro',
 }
 
-const PLAN_PRICES: Record<string, string> = {
-  gratuito: 'R$0',
-  bronze: 'R$34,90',
-  prata: 'R$54,90',
-  ouro: 'R$79,90',
+// Preços exibidos vêm de plans.monthly_price (fonte única); fallback = valor do seed
+function formatBRL(cents: number | null | undefined, fallback: string): string {
+  if (cents === null || cents === undefined) return fallback
+  if (cents === 0) return 'R$0'
+  return `R$${(cents / 100).toFixed(2).replace('.', ',')}`
 }
+function dbPlanPrice(id: string, fallback: string): string {
+  const row = planMap.value.get(id)
+  return row ? formatBRL(row.monthly_price, fallback) : fallback
+}
+const PLAN_PRICES = computed<Record<string, string>>(() => ({
+  gratuito: dbPlanPrice('gratuito', 'R$0'),
+  bronze: dbPlanPrice('bronze', 'R$34,90'),
+  prata: dbPlanPrice('prata', 'R$54,90'),
+  ouro: dbPlanPrice('ouro', 'R$79,90'),
+}))
+
+// Limite da feature ("N pedidos por mês" / "Pedidos ilimitados") lido do banco
+function withDbLimit(planId: string, feature: string): string {
+  const row = planMap.value.get(planId)
+  if (!row) return feature
+  if (/^\d+\s+pedidos por mês$/.test(feature)) {
+    return row.request_limit === null ? 'Pedidos ilimitados' : `${row.request_limit} pedidos por mês`
+  }
+  if (feature === 'Pedidos ilimitados' && row.request_limit !== null) {
+    return `${row.request_limit} pedidos por mês`
+  }
+  return feature
+}
+
+// PLANS com preço/limite mesclados do banco (copy de marketing mantida no resto)
+const displayPlans = computed(() =>
+  PLANS.map((p) => ({
+    ...p,
+    price: dbPlanPrice(p.id, p.price),
+    features: p.features.map((f) => withDbLimit(p.id, f)),
+  }))
+)
 
 const upgradeRecommendation = computed(() => {
   const current = proProfile.value.plan
   const order: Record<string, number> = { gratuito: 0, bronze: 1, prata: 2, ouro: 3 }
-  const next = PLANS.find((p) => order[p.id] === order[current] + 1)
+  const next = displayPlans.value.find((p) => order[p.id] === order[current] + 1)
   if (!next) return null
   return { plan: next.id, label: next.name, price: next.price, features: next.features }
 })
@@ -929,14 +1321,33 @@ const upgradeRecommendation = computed(() => {
 onMounted(() => {
   loadData()
   hydrateAuth()
+  syncTabFromRoute()
+  trackEvent('page_view_landing', { path: window.location.pathname })
+  window.addEventListener('pointermove', onCursorMove, { passive: true })
+  window.addEventListener('scroll', onPageScroll, { passive: true })
+  window.addEventListener('popstate', onRoutePopstate)
+  onPageScroll()
+  nextTick(() => initPremiumMotion())
+  // Re-inicializa reveals quando a landing entra em cena
+  watch(isLanding, (v) => {
+    if (v) nextTick(() => { initPremiumMotion(); onPageScroll() })
+  })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('pointermove', onCursorMove)
+  window.removeEventListener('scroll', onPageScroll)
+  window.removeEventListener('popstate', onRoutePopstate)
+  try { gsapCtx?.revert?.() } catch { /* noop */ }
 })
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
-    <!-- HEADER & MODE SWITCHER -->
-    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div ref="cursorGlow" id="cursor-glow" aria-hidden="true"></div>
+    <!-- HEADER TESLA: flutuante transparente sobre hero -->
+    <header :class="[isLanding && !isScrolled ? 'bg-transparent border-transparent' : 'bg-slate-950/85 backdrop-blur-md border-slate-800/80 shadow-lg shadow-black/20', 'fixed top-0 inset-x-0 z-40 border-b transition-all duration-300']">
+      <div class="max-w-[1383px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg">
             <img :src="logoUrl" alt="Casa Obras e Reparos" class="w-10 h-10 rounded-xl object-cover" />
@@ -951,55 +1362,13 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- NAV TABS (desktop) -->
-        <nav class="hidden md:flex items-center gap-1">
-          <button
-            @click="activeTab = 'boas_vindas'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
-              activeTab === 'boas_vindas' && userMode === null
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <Sparkles class="w-3.5 h-3.5 text-amber-400" />
-            Apresentação
+        <!-- NAV TESLA (desktop, 5 seções) -->
+        <nav v-if="isLanding || activeTab === 'profissionais'" class="hidden md:flex items-center gap-1">
+          <button v-for="s in teslaSections" :key="s.id" @click="scrollToId(s.id)" :class="['px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300', activeSection === s.id ? 'text-white bg-white/10' : 'text-slate-200/90 hover:text-white hover:bg-white/10']">
+            {{ s.label }}
           </button>
-          <button
-            @click="activeTab = 'como_funciona'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
-              activeTab === 'como_funciona'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <CircleDot class="w-3.5 h-3.5" />
-            Como Funciona
-          </button>
-          <button
-            @click="activeTab = 'para_profissionais'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
-              activeTab === 'para_profissionais'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <Handshake class="w-3.5 h-3.5" />
-            Para Profissionais
-          </button>
-          <button
-            @click="activeTab = 'contato'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5',
-              activeTab === 'contato'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <Mail class="w-3.5 h-3.5" />
-            Contato
+          <button @click="openProfessionalsPage" :class="['px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300', activeTab === 'profissionais' ? 'text-white bg-white/10' : 'text-slate-200/90 hover:text-white hover:bg-white/10']">
+            Profissionais
           </button>
         </nav>
 
@@ -1014,12 +1383,17 @@ onMounted(() => {
               <LayoutDashboard class="w-3.5 h-3.5" />
               Meu Painel
             </button>
-            <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700">
-              <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center">
+            <button
+              type="button"
+              class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700 cursor-pointer hover:border-amber-500/50 hover:bg-slate-800 transition-all text-left"
+              title="Editar meus dados"
+              @click="handleHeaderProfileClick"
+            >
+              <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center shrink-0">
                 <User class="w-3.5 h-3.5 text-slate-950" />
               </div>
-              <span class="text-xs font-bold text-white max-w-[120px] truncate">{{ authUser.name || authUser.email }}</span>
-            </div>
+              <span class="text-xs font-bold text-white max-w-[120px] truncate">{{ (userMode === 'pro' ? proProfile.name : userProfile?.name) || authUser.name || authUser.email }}</span>
+            </button>
             <button
               @click="handleLogout"
               class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 hover:border-red-500/50 hover:text-red-400 transition-all flex items-center gap-1.5"
@@ -1031,8 +1405,8 @@ onMounted(() => {
           </template>
           <button
             v-else
-            @click="showAuth = true; authView = 'login'"
-            class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98]"
+            @click="trackEvent('login_start', {}); showAuth = true; authView = 'login'"
+            class="btn-shine px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98]"
           >
             <LogIn class="w-4 h-4" />
             Entrar
@@ -1068,54 +1442,14 @@ onMounted(() => {
             <LayoutDashboard class="w-4 h-4" />
             Meu Painel
           </button>
-          <button
-            @click="activeTab = 'boas_vindas'; isMobileMenuOpen = false"
-            :class="[
-              'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
-              activeTab === 'boas_vindas'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <Sparkles class="w-4 h-4 text-amber-400" />
-            ✨ Apresentação
-          </button>
-          <button
-            @click="activeTab = 'como_funciona'; isMobileMenuOpen = false"
-            :class="[
-              'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
-              activeTab === 'como_funciona'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <CircleDot class="w-4 h-4" />
-            Como Funciona
-          </button>
-          <button
-            @click="activeTab = 'para_profissionais'; isMobileMenuOpen = false"
-            :class="[
-              'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
-              activeTab === 'para_profissionais'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <Handshake class="w-4 h-4" />
-            Para Profissionais
-          </button>
-          <button
-            @click="activeTab = 'contato'; isMobileMenuOpen = false"
-            :class="[
-              'w-full px-3 py-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-2',
-              activeTab === 'contato'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            ]"
-          >
-            <Mail class="w-4 h-4" />
-            Contato
-          </button>
+          <template v-if="isLanding || activeTab === 'profissionais'">
+            <button v-for="s in teslaSections" :key="'m-'+s.id" @click="scrollToId(s.id); isMobileMenuOpen = false" class="w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all flex items-center gap-2 text-slate-200 hover:text-white hover:bg-white/10">
+              {{ s.label }}
+            </button>
+            <button @click="openProfessionalsPage(); isMobileMenuOpen = false" :class="['w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all flex items-center gap-2', activeTab === 'profissionais' ? 'text-white bg-white/10' : 'text-slate-200 hover:text-white hover:bg-white/10']">
+              Profissionais
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -1359,108 +1693,88 @@ onMounted(() => {
     </div>
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
-      <!-- WELCOME / SYSTEM PRESENTATION TAB -->
-      <div v-if="activeTab === 'boas_vindas'" class="space-y-8 animate-in fade-in duration-300">
-        <!-- HERO PRESENTATION BANNER -->
-        <div class="relative rounded-3xl p-6 sm:p-10 lg:p-14 border border-amber-500/20 overflow-hidden shadow-2xl bg-slate-950">
-          <!-- background layers -->
+    <main :class="[isLanding ? 'flex-1 w-full' : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6']">
+      <!-- LANDING TESLA STACK -->
+      <div v-if="isLanding" class="tesla-stack">
+        <!-- 1/5 HERO TESLA fullscreen -->
+        <section id="inicio" class="tesla-section tesla-section-hero">
+          <div class="tesla-media tesla-media-hero">
+            <video v-if="heroVideoUrl" :src="heroVideoUrl" autoplay muted loop playsinline :poster="lojaUrl" class="opacity-70" />
+            <img v-else :src="lojaUrl" alt="Fachada Casa Obras e Reparos" class="opacity-65" />
+          </div>
+          <div class="tesla-media tesla-media-obra" aria-hidden="true"><img src="/obrasereparo.png" alt="" loading="eager" /></div>
           <div class="absolute -top-32 -left-32 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
           <div class="absolute -bottom-40 -right-24 w-[28rem] h-[28rem] bg-orange-600/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" style="animation-delay: 1.5s" />
-          <div class="absolute inset-0 opacity-[0.06]" style="background-image: radial-gradient(circle at 1px 1px, rgba(251,191,36,0.5) 1px, transparent 0); background-size: 28px 28px;" />
 
-          <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div class="space-y-5">
-              <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold tracking-wide backdrop-blur-sm">
-                <Sparkles class="w-4 h-4 text-amber-400" /> Plataforma Integrada com Inteligência Artificial
-              </div>
-
-              <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-                Seja Bem-Vindo ao <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">Casa Obras e Reparos</span>
-              </h2>
-
-              <p class="text-sm sm:text-base text-slate-300 max-w-xl leading-relaxed">
-                A solução completa feita para profissionais liberais, técnicos e prestadores de serviços em geral. Gerencie seus atendimentos, emita orçamentos instantâneos com foto por IA, agende visitas com lembrete WhatsApp para o cliente, crie recibos digitais e acompanhe seu faturamento mensal em um só lugar.
-              </p>
-
-              <!-- DUAL CTA BUTTONS -->
-              <div class="pt-2 flex flex-col sm:flex-row gap-3">
-                <button
-                  @click="goToModule('client', 'register')"
-                  class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs sm:text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Bot class="w-5 h-5" />
-                  Experimentar como Cliente (Criar Orçamento com IA)
-                  <ArrowRight class="w-4 h-4" />
-                </button>
-                <button
-                  @click="goToModule('pro', 'register')"
-                  class="px-6 py-3.5 rounded-xl bg-slate-800/80 text-amber-400 border border-amber-500/30 font-extrabold text-xs sm:text-sm hover:bg-slate-700/80 transition-all flex items-center justify-center gap-2 backdrop-blur-sm hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <Wrench class="w-5 h-5" />
-                  Acessar Painel do Prestador (Gestão & Relatórios)
-                </button>
-              </div>
+          <div class="relative z-10 w-full max-w-[1383px] mx-auto px-6 pt-24 pb-20 flex flex-col items-start text-left">
+            <p class="tesla-title text-white text-[32px] sm:text-[32px] leading-tight max-w-xl">Sua casa resolvida com 1 foto + IA</p>
+            <p class="mt-3 text-[14px] text-slate-200/90 max-w-xl">Orçamento instantâneo, profissionais verificados, WhatsApp direto e recibo digital.</p>
+            <div class="mt-6 flex flex-col sm:flex-row gap-3 w-full sm:w-auto sm:min-w-[520px] justify-start">
+              <button @click="trackCta('hero_cliente'); goToModule('client', 'register')" class="tesla-cta-primary flex-1 px-8 py-2.5 rounded-full text-[14px] font-medium">Criar Orçamento com IA</button>
+              <button @click="trackCta('hero_pro'); goToModule('pro', 'register')" class="tesla-cta-secondary flex-1 px-8 py-2.5 rounded-full text-[14px] font-medium">Sou Profissional</button>
             </div>
-
-            <!-- FACHADA COM MOLDURA DE VIDRO + BADGES FLUTUANTES -->
-            <div class="relative flex items-center justify-center py-6">
-              <div class="absolute -inset-6 bg-gradient-to-r from-amber-500/25 via-yellow-400/10 to-orange-500/25 rounded-full blur-3xl animate-pulse-slow" />
-
-              <div class="relative p-1.5 rounded-[1.75rem] bg-gradient-to-br from-amber-500/60 via-slate-700/40 to-yellow-400/60 shadow-2xl shadow-amber-500/20 group hover:rotate-0 rotate-2 transition-transform duration-500">
-                <div class="relative overflow-hidden rounded-[1.35rem]">
-                  <img :src="lojaUrl" alt="Casa Obras e Reparos" class="w-full max-w-sm lg:max-w-md aspect-square object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-slate-950/20" />
-                </div>
-              </div>
-
-              <!-- BADGE IA -->
-              <div class="absolute top-3 -left-2 sm:left-0 animate-float bg-slate-950/90 backdrop-blur-md border border-amber-500/40 rounded-2xl px-3.5 py-2 shadow-lg shadow-amber-500/10">
-                <div class="flex items-center gap-2">
-                  <Brain class="w-4 h-4 text-amber-400" />
-                  <span class="text-[11px] font-bold text-white">IA Integrada</span>
-                </div>
-              </div>
-
-              <!-- BADGE WHATSAPP -->
-              <div class="absolute bottom-8 -right-1 sm:right-0 animate-float bg-slate-950/90 backdrop-blur-md border border-emerald-500/40 rounded-2xl px-3.5 py-2 shadow-lg shadow-emerald-500/10" style="animation-delay: 1s">
-                <div class="flex items-center gap-2">
-                  <MessageCircle class="w-4 h-4 text-emerald-400" />
-                  <span class="text-[11px] font-bold text-white">WhatsApp Rápido</span>
-                </div>
-              </div>
-
-              <!-- SELO 4.9★ -->
-              <div class="absolute -bottom-2 left-2 sm:left-6 w-16 h-16 animate-spin-slow">
-                <div class="absolute inset-0 rounded-full border-2 border-dashed border-amber-400/50" />
-                <div class="absolute inset-[7px] rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex flex-col items-center justify-center shadow-lg shadow-amber-500/30 animate-pulse-slow">
-                  <span class="text-white font-black text-xs leading-none">4.9</span>
-                  <Star class="w-2.5 h-2.5 text-white fill-white mt-0.5" />
-                </div>
-              </div>
-            </div>
+            <p class="mt-4 text-[14px] text-slate-300/60">• Resposta em ~24h • 100% digital • 4.9★</p>
           </div>
+        </section>
 
-          <!-- STATS BAND -->
-          <div class="relative z-10 mt-10 pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="text-center sm:text-left">
-              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">+200</div>
-              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Profissionais cadastrados</div>
-            </div>
-            <div class="text-center sm:text-left">
-              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">4.9★</div>
-              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Avaliação média dos serviços</div>
-            </div>
-            <div class="text-center sm:text-left">
-              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">24h</div>
-              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Resposta média aos chamados</div>
-            </div>
-            <div class="text-center sm:text-left">
-              <div class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">100%</div>
-              <div class="text-[11px] sm:text-xs text-slate-400 font-medium mt-1">Digital, do orçamento ao recibo</div>
+        <!-- FAIXA LOGOS abaixo do hero -->
+        <div class="w-full bg-slate-950 py-10 sm:py-14">
+          <div class="max-w-6xl mx-auto px-4 sm:px-6 gs-reveal space-y-4">
+            <p class="text-center text-[11px] font-bold tracking-[0.25em] text-slate-500 uppercase">Profissionais e parceiros em movimento</p>
+            <div class="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 py-4">
+              <div class="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-950 to-transparent z-10 pointer-events-none" />
+              <div class="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-950 to-transparent z-10 pointer-events-none" />
+              <div class="flex animate-marquee gap-4 px-4" style="width: max-content;">
+                <span v-for="(logo, i) in [...partnerLogos, ...partnerLogos]" :key="'logo-'+i" class="glass flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-slate-200 whitespace-nowrap">
+                  <span class="w-2 h-2 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300"></span>{{ logo }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- 2/5 ELÉTRICA & HIDRÁULICA split -->
+        <section id="servicos-eletrica" class="w-full max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-24">
+          <div class="tesla-card-split gs-reveal grid grid-cols-1 lg:grid-cols-2 overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70">
+            <div class="p-6 sm:p-10 flex flex-col justify-center text-left">
+              <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold"><Zap class="w-4 h-4" /> Elétrica & Hidráulica</span>
+              <p class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-4">Eletricista e encanador verificados</p>
+              <p class="mt-3 text-[14px] text-slate-300 max-w-md">Foto do problema → IA estima valor → profissional da sua região com recibo digital.</p>
+              <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                <button @click="trackCta('eletrica_orcamento'); goToModule('client', 'register')" class="tesla-cta-primary px-8 py-2.5 rounded-full text-[14px] font-medium">Pedir Orçamento</button>
+                <button @click="scrollToId('como-funciona')" class="tesla-cta-secondary px-8 py-2.5 rounded-full text-[14px] font-medium">Como Funciona</button>
+              </div>
+            </div>
+            <div class="relative min-h-[240px] lg:min-h-[320px] bg-slate-950">
+              <img src="https://images.pexels.com/photos/257736/pexels-photo-257736.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Serviço de elétrica" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/20 to-transparent"></div>
+              <div class="absolute bottom-4 left-4 flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-950/85 border border-amber-500/30"><Zap class="w-4 h-4 text-amber-300" /><span class="text-[11px] font-bold text-white">Resposta em ~24h</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3/5 PINTURA & REFORMAS split -->
+        <section id="servicos-reforma" class="w-full max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-24">
+          <div class="tesla-card-split gs-reveal grid grid-cols-1 lg:grid-cols-2 overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70">
+            <div class="relative min-h-[240px] lg:min-h-[320px] bg-slate-950 order-2 lg:order-1">
+              <img src="https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Pintura e reformas" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-gradient-to-l from-slate-900 via-slate-900/20 to-transparent"></div>
+              <div class="absolute bottom-4 left-4 flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-950/85 border border-amber-500/30"><Sparkles class="w-4 h-4 text-amber-300" /><span class="text-[11px] font-bold text-white">Avaliação 4.9★</span></div>
+            </div>
+            <div class="p-6 sm:p-10 flex flex-col justify-center text-left order-1 lg:order-2">
+              <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold"><Sparkles class="w-4 h-4" /> Pintura & Reformas</span>
+              <p class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-4">Pintores, pedreiros e marceneiros</p>
+              <p class="mt-3 text-[14px] text-slate-300 max-w-md">Avaliação real, orçamento por IA e recibo digital incluído do início ao fim.</p>
+              <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                <button @click="trackCta('reforma_orcamento'); goToModule('client', 'register')" class="tesla-cta-primary px-8 py-2.5 rounded-full text-[14px] font-medium">Pedir Orçamento</button>
+                <button @click="scrollToId('categorias')" class="tesla-cta-secondary px-8 py-2.5 rounded-full text-[14px] font-medium">Ver Serviços</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- resto compacto -->
+        <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 py-14 space-y-12">
 
         <!-- HOW IT WORKS DUAL WORKFLOW -->
         <div class="space-y-6">
@@ -1561,10 +1875,144 @@ onMounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- STATS + SVG ANIMADO -->
+        <div id="como-funciona" class="gs-reveal glass rounded-3xl p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center scroll-mt-24">
+          <div class="space-y-5">
+            <h3 class="text-2xl sm:text-3xl font-black text-white tracking-tight">Do clique ao <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-yellow-300">recibo digital</span></h3>
+            <p class="text-sm text-slate-300 leading-relaxed">Foto → IA → WhatsApp → Recibo. Sem intermediário, sem papel, sem espera.</p>
+            <div class="grid grid-cols-3 gap-4">
+              <div class="text-center"><div class="text-2xl sm:text-3xl font-black text-amber-300" data-count="200" data-suffix="+">0</div><div class="text-[11px] text-slate-400 mt-1">Profissionais</div></div>
+              <div class="text-center"><div class="text-2xl sm:text-3xl font-black text-amber-300" data-count="49" data-suffix="">0</div><div class="text-[11px] text-slate-400 mt-1">Nota ×10 (4.9)</div></div>
+              <div class="text-center"><div class="text-2xl sm:text-3xl font-black text-amber-300" data-count="24" data-suffix="h">0</div><div class="text-[11px] text-slate-400 mt-1">Resposta média</div></div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button @click="trackCta('stats_cliente'); goToModule('client','register')" class="btn-shine flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black hover:from-amber-400 hover:to-yellow-300 transition-all">Pedir orçamento agora</button>
+              <button @click="scrollToId('contato')" class="flex-1 px-5 py-3 rounded-xl border border-slate-700 text-xs font-bold text-slate-200 hover:border-amber-500/50 hover:text-white transition-all">Falar no WhatsApp</button>
+            </div>
+          </div>
+          <div class="reveal relative rounded-2xl border border-white/10 bg-slate-950/60 p-6 overflow-hidden">
+            <svg viewBox="0 0 300 160" class="w-full h-auto" fill="none" aria-hidden="true">
+              <path class="svg-draw" d="M10 130 C 70 130, 70 60, 130 60 S 190 60, 190 30 S 250 20, 290 20" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" />
+              <circle cx="10" cy="130" r="6" fill="#f59e0b" /><circle cx="130" cy="60" r="6" fill="#22c55e" /><circle cx="190" cy="30" r="6" fill="#38bdf8" /><circle cx="290" cy="20" r="6" fill="#facc15" />
+            </svg>
+            <div class="grid grid-cols-4 gap-2 mt-4 text-center text-[10px] font-bold text-slate-300">
+              <span>Foto</span><span>IA</span><span>WhatsApp</span><span>Recibo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CATEGORIAS GLASSMORPHISM com tilt 3D -->
+        <div id="categorias" class="space-y-5 scroll-mt-24">
+          <div class="gs-reveal flex items-end justify-between gap-4">
+            <div><h3 class="text-xl sm:text-2xl font-extrabold text-white">Serviços em destaque</h3><p class="text-xs text-slate-400 mt-1">Clique numa profissão para ver os profissionais cadastrados</p></div>
+            <button @click="handleLandingCategory('Todas')" class="hidden sm:flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-amber-200">Ver tudo <ArrowRight class="w-4 h-4" /></button>
+          </div>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div v-for="cat in CATEGORIES" :key="'glass-'+cat.name" @mousemove="handleTilt" @mouseleave="resetTilt" class="tilt-3d glass group rounded-2xl overflow-hidden cursor-pointer transition-shadow hover:shadow-amber-500/20 hover:shadow-2xl" @click="handleLandingCategory(cat.name)">
+              <div class="relative h-28 sm:h-32 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br opacity-80" :class="cat.gradient" />
+                <img v-if="cat.img" :src="cat.img" :alt="cat.name" loading="lazy" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" @error="($event.target as HTMLImageElement).style.display='none'" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/10 to-transparent" />
+              </div>
+              <div class="tilt-inner p-3.5 flex items-center gap-2.5">
+                <component :is="cat.icon" class="w-5 h-5 text-amber-300 shrink-0" />
+                <span class="text-xs font-bold text-white leading-tight">{{ cat.name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        </div><!-- /resto compacto parte 1 -->
+
+        <!-- 4/5 PROFISSIONAIS split -->
+        <section id="profissionais" class="w-full max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-24">
+          <div class="tesla-card-split gs-reveal grid grid-cols-1 lg:grid-cols-2 overflow-hidden rounded-3xl border border-amber-500/25 bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900">
+            <div class="p-6 sm:p-10 flex flex-col justify-center text-left">
+              <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold"><Handshake class="w-4 h-4" /> Para profissionais</span>
+              <p class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-4">Receba chamados ainda hoje</p>
+              <p class="mt-3 text-[14px] text-slate-300 max-w-md">Broadcast com foto + IA • WhatsApp direto • Recibo digital e relatórios.</p>
+              <div class="mt-5 flex flex-wrap gap-2 text-[12px] font-medium">
+                <span class="px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">Bronze {{ dbPlanPrice('bronze', 'R$34,90') }}</span>
+                <span class="px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">Prata {{ dbPlanPrice('prata', 'R$54,90') }}</span>
+                <span class="px-4 py-1.5 rounded-full bg-amber-500 text-slate-950">Ouro {{ dbPlanPrice('ouro', 'R$79,90') }}</span>
+              </div>
+              <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                <button @click="trackCta('pro_cadastrar'); goToModule('pro','register')" class="tesla-cta-primary px-8 py-2.5 rounded-full text-[14px] font-medium">Cadastrar como Profissional</button>
+                <button @click="scrollToId('contato')" class="tesla-cta-secondary px-8 py-2.5 rounded-full text-[14px] font-medium">Falar no WhatsApp</button>
+              </div>
+            </div>
+            <div class="relative min-h-[240px] lg:min-h-[320px] bg-slate-950">
+              <img :src="lojaUrl" alt="Loja Casa Obras e Reparos" loading="lazy" class="absolute inset-0 w-full h-full object-cover" style="object-position: center 22%;" />
+              <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/20 to-transparent"></div>
+              <div class="absolute bottom-4 left-4 flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-950/85 border border-amber-500/30"><BadgeCheck class="w-4 h-4 text-emerald-400" /><span class="text-[11px] font-bold text-white">Selo verificado no Ouro</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- resto compacto parte 2 -->
+        <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 py-14 space-y-12">
+        <!-- FAQ com animações -->
+        <div id="faq" class="gs-reveal max-w-3xl mx-auto w-full space-y-4 scroll-mt-24">
+          <div class="text-center space-y-2"><h3 class="text-xl sm:text-2xl font-extrabold text-white">Perguntas frequentes</h3><p class="text-xs text-slate-400">Tudo o que você precisa saber antes de começar</p></div>
+          <div class="space-y-2.5">
+            <div v-for="(f, i) in faqs" :key="'faq-'+i" class="glass rounded-2xl overflow-hidden">
+              <button @click="openFaq = openFaq === i ? null : i" class="w-full flex items-center justify-between gap-3 px-5 py-4 text-left">
+                <span class="text-xs sm:text-sm font-bold text-white">{{ f.q }}</span>
+                <ChevronDown :class="['w-4 h-4 shrink-0 text-amber-300 transition-transform duration-300', openFaq === i ? 'rotate-180' : '']" />
+              </button>
+              <div :class="['faq-panel px-5', openFaq === i ? 'open' : '']"><div class="faq-inner"><p class="pb-5 text-xs text-slate-300 leading-relaxed">{{ f.a }}</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        </div><!-- /resto compacto parte 2 -->
+
+        <!-- 5/5 CONTATO split -->
+        <section id="contato" class="w-full max-w-6xl mx-auto px-4 sm:px-6 scroll-mt-24">
+          <div class="tesla-card-split gs-reveal grid grid-cols-1 lg:grid-cols-2 overflow-hidden rounded-3xl border border-emerald-500/20 bg-slate-900/70">
+            <div class="p-6 sm:p-10 flex flex-col justify-center text-left">
+              <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold"><MessageCircle class="w-4 h-4" /> Resposta rápida</span>
+              <p class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-4">Fale no WhatsApp</p>
+              <p class="mt-3 text-[14px] text-slate-300 max-w-md">Preencha ao lado — abrimos o WhatsApp com sua mensagem pronta. Você continua na página.</p>
+              <div class="mt-4 flex items-center gap-2 text-[12px] text-slate-400"><ShieldCheck class="w-4 h-4 text-emerald-400" /> Seus dados só iniciam a conversa.</div>
+            </div>
+          <form @submit.prevent="handleContactSubmit" class="bg-slate-950/70 p-5 sm:p-8 space-y-4 border-t lg:border-t-0 lg:border-l border-white/10">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input v-model="contactForm.name" required placeholder="Seu nome *" class="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />
+              <input v-model="contactForm.phone" placeholder="WhatsApp (11) 99999-9999" class="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input v-model="contactForm.email" type="email" required placeholder="seu@email.com *" class="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />
+              <select v-model="contactForm.category" class="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60 transition-all"><option value="">Categoria...</option><option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option><option :value="CATEGORY_UNLISTED">Serviço que não está na lista</option></select>
+            </div>
+            <div v-if="contactForm.category === CATEGORY_UNLISTED" class="space-y-1.5">
+              <input v-model="contactForm.categoryOther" required placeholder="Qual serviço? ex: Piscineiro, Montador de cortinas *" class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />
+              <p class="text-[11px] text-slate-500">Diga qual serviço você precisa — vamos avaliar para adicionar.</p>
+            </div>
+            <input v-model="contactForm.subject" required placeholder="Assunto * — ex: vazamento na cozinha" class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />
+            <textarea v-model="contactForm.message" required rows="3" placeholder="Descreva sua necessidade..." class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all resize-none" />
+            <div v-if="contactSuccess" class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-2"><CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" /><p class="text-xs text-emerald-300">WhatsApp aberto! Se não abriu, verifique o bloqueador de pop-ups.</p></div>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+              <button type="submit" :disabled="contactSubmitting" class="tesla-cta-primary flex-1 px-8 py-2.5 rounded-full text-[14px] font-medium disabled:opacity-50">{{ contactSubmitting ? 'Abrindo...' : 'Enviar via WhatsApp' }}</button>
+            </div>
+          </form>
+          </div>
+        </section>
+
+        <!-- dots laterais Tesla -->
+        <div class="hidden lg:flex fixed right-6 top-1/2 -translate-y-1/2 z-30 flex-col gap-2.5">
+          <button v-for="s in teslaSections" :key="'dot-'+s.id" @click="scrollToId(s.id)" :title="s.label" :class="['tesla-dot w-2.5 h-2.5 rounded-full', activeSection === s.id ? 'bg-amber-400 scale-125' : 'bg-white/30 hover:bg-white/60']" />
+        </div>
+
+        <!-- FAQ compacto pós-stack -->
+        <div class="w-full max-w-3xl mx-auto px-4 sm:px-6 py-14">
+          <div class="text-center space-y-2"><p class="text-[13px] font-medium text-slate-300">Dúvidas? Veja as perguntas frequentes acima no conteúdo — ou chame no WhatsApp.</p></div>
+        </div>
       </div>
 
-      <!-- CONTATO PAGE -->
-      <div v-if="activeTab === 'contato'" class="space-y-8 animate-in fade-in duration-300">
+      <!-- LEGADO (mantido fora da landing single-page) -->
+      <div v-if="false" class="space-y-8 animate-in fade-in duration-300">
         <div class="bg-slate-950 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden">
           <div class="absolute -top-32 -left-24 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
           <div class="absolute -bottom-40 -right-20 w-[26rem] h-[26rem] bg-orange-600/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" style="animation-delay: 1.5s" />
@@ -1626,9 +2074,20 @@ onMounted(() => {
                 >
                   <option value="">Selecione...</option>
                   <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option>
-                  <option value="Outro">Outro</option>
+                  <option :value="CATEGORY_UNLISTED">Serviço que não está na lista</option>
                 </select>
               </div>
+            </div>
+
+            <div v-if="contactForm.category === CATEGORY_UNLISTED">
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">Qual serviço você precisa? *</label>
+              <input
+                v-model="contactForm.categoryOther"
+                required
+                placeholder="Ex: Piscineiro, Montador de cortinas, Instalação de painel solar"
+                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
+              />
+              <p class="mt-1.5 text-[11px] text-slate-500">Vamos avaliar e adicionar essa categoria.</p>
             </div>
 
             <div>
@@ -1671,7 +2130,7 @@ onMounted(() => {
       </div>
 
       <!-- COMO FUNCIONA PAGE -->
-      <div v-if="activeTab === 'como_funciona'" class="space-y-10 animate-in fade-in duration-300">
+      <div v-if="false && activeTab === 'como_funciona'" class="space-y-10 animate-in fade-in duration-300">
         <!-- HERO -->
         <div class="bg-slate-950 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden text-center">
           <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
@@ -1893,7 +2352,7 @@ onMounted(() => {
       </div>
 
       <!-- PARA PROFISSIONAIS PAGE -->
-      <div v-if="activeTab === 'para_profissionais'" class="space-y-10 animate-in fade-in duration-300">
+      <div v-if="false && activeTab === 'para_profissionais'" class="space-y-10 animate-in fade-in duration-300">
         <!-- HERO -->
         <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden">
           <div class="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
@@ -1942,6 +2401,7 @@ onMounted(() => {
               >
                 <div class="absolute inset-0 bg-gradient-to-br opacity-90" :class="cat.gradient" />
                 <img
+                  v-if="cat.img"
                   :src="cat.img"
                   :alt="cat.name"
                   loading="lazy"
@@ -2160,7 +2620,7 @@ onMounted(() => {
       </div>
 
       <!-- BLOG / DICAS PAGE -->
-      <div v-if="activeTab === 'blog'" class="space-y-8 animate-in fade-in duration-300">
+      <div v-if="false && activeTab === 'blog'" class="space-y-8 animate-in fade-in duration-300">
         <!-- HERO -->
         <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/20 rounded-3xl p-6 sm:p-10 border border-amber-500/20 relative overflow-hidden text-center">
           <div class="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -z-0 pointer-events-none" />
@@ -2324,6 +2784,96 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- ROTA PÚBLICA #/profissionais: CATÁLOGO POR PROFISSÃO -->
+      <div v-if="activeTab === 'profissionais'" class="pt-20 pb-10 space-y-5 animate-in fade-in duration-300">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
+              <HardHat class="w-4 h-4" /> Profissionais
+            </span>
+            <h1 class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-3">Encontre por profissão</h1>
+            <p class="text-xs text-slate-400 mt-1">
+              {{ filterCategory === 'Todas' ? 'Escolha uma profissão para filtrar' : `Mostrando: ${filterCategory}` }}
+              · {{ filteredProfessionals.length }} encontrado(s)
+            </p>
+          </div>
+          <button @click="scrollToId('inicio')" class="text-xs font-bold text-slate-300 hover:text-white border border-slate-700 rounded-full px-4 py-2 whitespace-nowrap">Voltar ao início</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="cat in ['Todas', ...CATEGORIES.map(c => c.name)]"
+            :key="'pub-'+cat"
+            @click="handleLandingCategory(cat)"
+            :class="['px-4 py-1.5 rounded-full text-[11px] font-bold border transition-all', filterCategory === cat ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500/50']"
+          >
+            {{ cat }}
+          </button>
+        </div>
+        <div v-if="filterCategory !== 'Todas'" class="flex justify-end">
+          <button @click="handleLandingCategory('Todas')" class="text-xs font-bold text-slate-300 hover:text-white border border-slate-700 rounded-full px-4 py-1.5">Limpar filtro</button>
+        </div>
+
+        <!-- FILTROS DE LOCALIZAÇÃO (UF / CIDADE / BAIRRO) -->
+        <div class="flex flex-wrap items-center gap-2">
+          <select
+            v-model="filterUf"
+            aria-label="Filtrar por UF"
+            class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
+          >
+            <option v-for="u in availableUfs" :key="'pub-uf-' + u" :value="u">
+              {{ u === 'Todas' ? 'Todas as UFs' : u }}
+            </option>
+          </select>
+          <select
+            v-model="filterCidade"
+            aria-label="Filtrar por cidade"
+            class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
+          >
+            <option v-for="c in availableCidades" :key="'pub-cidade-' + c" :value="c">
+              {{ c === 'Todas' ? 'Todas as cidades' : c }}
+            </option>
+          </select>
+          <select
+            v-model="filterBairro"
+            aria-label="Filtrar por bairro"
+            class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
+          >
+            <option v-for="b in availableBairros" :key="'pub-bairro-' + b" :value="b">
+              {{ b === 'Todos' ? 'Todos os bairros' : b }}
+            </option>
+          </select>
+          <button
+            v-if="filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
+            type="button"
+            @click="resetDirectoryFilters"
+            class="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
+          >
+            Limpar filtros
+          </button>
+        </div>
+
+        <div v-if="isLoading" class="text-center text-xs text-slate-400 py-8">Carregando profissionais...</div>
+        <div v-else-if="paginatedProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
+          <p class="text-sm text-slate-300 font-bold">Nenhum profissional nesta categoria ainda.</p>
+          <p class="text-xs text-slate-400 mt-1">Tente outra profissão ou envie para todos após a análise da IA.</p>
+        </div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <ProfessionalCard
+            v-for="pro in paginatedProfessionals"
+            :key="'pub-'+pro.id"
+            :professional="pro"
+            :plan-info="planMap.get(pro.plan) ?? null"
+            :selectable="true"
+            :selected="selectedProfessional?.id === pro.id"
+            @choose="handleChooseProfessional"
+            @clear="clearProfessionalSelection"
+          />
+        </div>
+        <p v-if="selectedProfessional" class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5">
+          Selecionado: <strong>{{ selectedProfessional.name }}</strong> ({{ selectedProfessional.category }}) — faça login/cadastro para preencher a solicitação.
+        </p>
+      </div>
+
       <!-- MODE CLIENT: TAB 1 - SOLICITAR COM IA -->
       <div v-if="userMode === 'client' && activeTab === 'solicitar'" class="space-y-6 animate-in fade-in duration-300">
         <!-- CLIENT SUB-TABS -->
@@ -2351,6 +2901,13 @@ onMounted(() => {
           >
             <FileText class="w-3.5 h-3.5" />
             Meus Recibos
+          </button>
+          <button
+            @click="activeTab = 'historico_cliente'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
           </button>
         </div>
 
@@ -2408,10 +2965,11 @@ onMounted(() => {
             <div>
               <h3 class="text-base font-bold text-white flex items-center gap-2">
                 <Building2 class="w-4 h-4 text-amber-400" />
-                Profissionais disponíveis
+                Profissionais disponíveis — clique em Escolher para preencher a solicitação
               </h3>
               <p class="text-[10px] text-slate-400 mt-0.5">
                 {{ filteredProfessionals.length }} profissional(is) encontrado(s)
+                <span v-if="selectedProfessional" class="text-amber-300">· Selecionado: {{ selectedProfessional.name }}</span>
               </p>
             </div>
           </div>
@@ -2435,6 +2993,38 @@ onMounted(() => {
               <option value="prata">🔒 Prata</option>
               <option value="bronze">🛡️ Bronze</option>
             </select>
+            <select
+              v-model="filterUf"
+              class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
+            >
+              <option v-for="u in availableUfs" :key="'uf-' + u" :value="u">
+                {{ u === 'Todas' ? '📍 Todas as UFs' : u }}
+              </option>
+            </select>
+            <select
+              v-model="filterCidade"
+              class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
+            >
+              <option v-for="c in availableCidades" :key="'cidade-' + c" :value="c">
+                {{ c === 'Todas' ? '🏙️ Todas as cidades' : c }}
+              </option>
+            </select>
+            <select
+              v-model="filterBairro"
+              class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
+            >
+              <option v-for="b in availableBairros" :key="'bairro-' + b" :value="b">
+                {{ b === 'Todos' ? '🏘️ Todos os bairros' : b }}
+              </option>
+            </select>
+            <button
+              v-if="filterCategory !== 'Todas' || filterPlan !== 'Todos' || filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
+              type="button"
+              @click="resetDirectoryFilters"
+              class="px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
+            >
+              Limpar filtros
+            </button>
           </div>
 
           <!-- CARDS GRID -->
@@ -2444,6 +3034,10 @@ onMounted(() => {
               :key="pro.id"
               :professional="pro"
               :plan-info="planMap.get(pro.plan) ?? null"
+              :selectable="true"
+              :selected="selectedProfessional?.id === pro.id"
+              @choose="handleChooseProfessional"
+              @clear="clearProfessionalSelection"
             />
           </div>
 
@@ -2485,7 +3079,12 @@ onMounted(() => {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div v-if="selectedProfessional" class="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+          <p class="text-xs text-amber-200">Solicitando para <strong>{{ selectedProfessional.name }}</strong> ({{ selectedProfessional.category }})</p>
+          <button type="button" @click="clearProfessionalSelection" class="text-[11px] text-slate-300 hover:text-white underline">Trocar / cancelar</button>
+        </div>
+
+        <div id="solicitar-form" class="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-24">
           <!-- LEFT COLUMN: UPLOAD & INPUTS -->
           <div class="lg:col-span-7 bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-5">
             <h3 class="text-base font-bold text-white flex items-center gap-2">
@@ -2554,11 +3153,11 @@ onMounted(() => {
             <!-- CLIENT DETAILS FORM -->
             <div class="space-y-3 pt-2 border-t border-slate-800">
               <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                3. Seus Dados de Contato e Endereço:
+                3. Seus Dados de Contato e Endereço: <span class="text-amber-400 normal-case">* obrigatórios ao confirmar</span>
               </h4>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="text-[11px] text-slate-400 font-medium">Seu Nome Completo:</label>
+                  <label class="text-[11px] text-slate-400 font-medium">Seu Nome Completo: *</label>
                   <input
                     type="text"
                     v-model="clientName"
@@ -2567,7 +3166,7 @@ onMounted(() => {
                   />
                 </div>
                 <div>
-                  <label class="text-[11px] text-slate-400 font-medium">WhatsApp para Notificação:</label>
+                  <label class="text-[11px] text-slate-400 font-medium">WhatsApp para Notificação: *</label>
                   <input
                     type="text"
                     v-model="clientPhone"
@@ -2577,7 +3176,7 @@ onMounted(() => {
                 </div>
               </div>
               <div>
-                <label class="text-[11px] text-slate-400 font-medium">Endereço do Atendimento:</label>
+                <label class="text-[11px] text-slate-400 font-medium">Endereço do Atendimento: *</label>
                 <input
                   type="text"
                   v-model="clientAddress"
@@ -2652,6 +3251,14 @@ onMounted(() => {
                 </div>
 
                 <div v-if="latestAiResult && !isAnalyzing" class="space-y-4 text-xs animate-in fade-in duration-200">
+                  <div v-if="latestAiResult.suggestedMinPrice === 0 && latestAiResult.suggestedMaxPrice === 0" class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-2">
+                    <Bot class="w-4 h-4 text-blue-400 shrink-0" />
+                    <p class="text-[11px] text-blue-300">Análise preliminar por categoria. O profissional confirma os valores exatos no WhatsApp.</p>
+                  </div>
+                  <div v-if="aiReadyToast" class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-2">
+                    <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+                    <p class="text-[11px] text-emerald-300">Análise da IA concluída com valores e materiais.</p>
+                  </div>
                   <!-- SUMMARY HEADER -->
                   <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
                     <div class="flex items-center justify-between">
@@ -2725,6 +3332,22 @@ onMounted(() => {
                       Como deseja enviar seu orçamento?
                     </span>
                     <button
+                      v-if="selectedProfessional"
+                      type="button"
+                      @click="sendMode = 'direct'"
+                      class="w-full p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/15 transition-all text-left flex items-start gap-3"
+                    >
+                      <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check class="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p class="font-bold text-white text-xs">Enviar para {{ selectedProfessional.name }}</p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">
+                          {{ selectedProfessional.category }} · contato direto via WhatsApp após salvar o pedido.
+                        </p>
+                      </div>
+                    </button>
+                    <button
                       type="button"
                       @click="sendMode = 'broadcast'"
                       class="w-full p-4 rounded-xl border border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10 transition-all text-left flex items-start gap-3"
@@ -2741,18 +3364,18 @@ onMounted(() => {
                       </div>
                     </button>
                     <button
-                      v-if="ourosNoCatalogo.length > 0"
+                      v-if="!selectedProfessional && directCandidates.length > 0"
                       type="button"
-                      @click="sendMode = 'ouro'"
+                      @click="sendMode = 'direct'"
                       class="w-full p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 transition-all text-left flex items-start gap-3"
                     >
                       <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
                         <Sparkles class="w-5 h-5" />
                       </div>
                       <div>
-                        <p class="font-bold text-white text-xs">Falar com um profissional ouro</p>
+                        <p class="font-bold text-white text-xs">Escolher um profissional específico</p>
                         <p class="text-[10px] text-slate-400 mt-0.5">
-                          Selecione um profissional ouro para contato direto via WhatsApp.
+                          Selecione abaixo um profissional de {{ selectedCategory }} para contato direto via WhatsApp.
                         </p>
                       </div>
                     </button>
@@ -2774,25 +3397,25 @@ onMounted(() => {
                     </button>
                   </div>
 
-                  <!-- OURO SELECTION -->
-                  <div v-if="sendMode === 'ouro'" class="space-y-2">
+                  <!-- DIRECT SELECTION (qualquer plano) -->
+                  <div v-if="sendMode === 'direct'" class="space-y-2">
                     <button
                       type="button"
-                      @click="sendMode = null; selectedOuroProfessional = null"
+                      @click="clearProfessionalSelection"
                       class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
                     >
                       ← Voltar e escolher outra opção
                     </button>
                     <span class="font-bold text-amber-400 text-[11px] block">
-                      Selecione o profissional ouro:
+                      Selecione o profissional ({{ selectedCategory }}):
                     </span>
                     <div
-                      v-for="pro in ourosNoCatalogo"
+                      v-for="pro in directCandidates"
                       :key="pro.id"
-                      @click="selectedOuroProfessional = pro"
+                      @click="selectedProfessional = pro"
                       :class="[
                         'p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all',
-                        selectedOuroProfessional?.id === pro.id
+                        selectedProfessional?.id === pro.id
                           ? 'bg-amber-500/10 border-amber-500/40 ring-1 ring-amber-500/30'
                           : 'bg-slate-950 border-slate-800 hover:border-slate-700'
                       ]"
@@ -2804,7 +3427,7 @@ onMounted(() => {
                         </div>
                         <div>
                           <p class="font-bold text-white text-xs">{{ pro.name }}</p>
-                          <p class="text-[10px] text-slate-400">{{ pro.category }}</p>
+                          <p class="text-[10px] text-slate-400">{{ pro.category }} · {{ PLAN_LABELS[pro.plan] ?? pro.plan }}</p>
                         </div>
                       </div>
                       <div class="text-right">
@@ -2821,13 +3444,17 @@ onMounted(() => {
 
               <!-- CONFIRM ORDER BUTTON -->
               <div v-if="latestAiResult && !isAnalyzing && sendMode" class="pt-4 mt-4 border-t border-slate-800">
+                <div v-if="formError" class="mb-2 bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-2">
+                  <X class="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <p class="text-xs text-red-300">{{ formError }}</p>
+                </div>
                 <button
                   type="button"
                   @click="handleConfirmOrder"
-                  :disabled="sendMode === 'ouro' && !selectedOuroProfessional"
+                  :disabled="sendMode === 'direct' && !selectedProfessional"
                   :class="[
                     'w-full py-3 rounded-xl font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2',
-                    (sendMode === 'broadcast' || (sendMode === 'ouro' && selectedOuroProfessional))
+                    (sendMode === 'broadcast' || (sendMode === 'direct' && selectedProfessional))
                       ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-amber-500/20'
                       : 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
                   ]"
@@ -2836,11 +3463,11 @@ onMounted(() => {
                   <template v-if="sendMode === 'broadcast'">
                     Enviar para {{ prataBronzeCount }} profissionais
                   </template>
-                  <template v-else-if="sendMode === 'ouro' && selectedOuroProfessional">
-                    Enviar para {{ selectedOuroProfessional.name }}
+                  <template v-else-if="sendMode === 'direct' && selectedProfessional">
+                    Enviar para {{ selectedProfessional.name }}
                   </template>
                   <template v-else>
-                    Selecione um profissional ouro
+                    Selecione um profissional
                   </template>
                 </button>
               </div>
@@ -2877,6 +3504,13 @@ onMounted(() => {
             <FileText class="w-3.5 h-3.5" />
             Meus Recibos
           </button>
+          <button
+            @click="activeTab = 'historico_cliente'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
+          </button>
         </div>
 
         <div class="flex items-center justify-between">
@@ -2891,6 +3525,36 @@ onMounted(() => {
           </div>
         </div>
 
+        <!-- FILTRO POR STATUS -->
+        <div v-if="myRequests.length > 0" class="flex flex-wrap gap-2">
+          <button
+            v-for="f in ([
+              { id: 'todas', label: 'Todas' },
+              { id: 'pendentes', label: 'Pendentes' },
+              { id: 'andamento', label: 'Em andamento' },
+              { id: 'concluidas', label: 'Concluídas' },
+            ] as const)"
+            :key="f.id"
+            @click="clientStatusFilter = f.id"
+            :class="[
+              'px-3.5 py-1.5 rounded-full text-xs font-bold transition-all border',
+              clientStatusFilter === f.id
+                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/20'
+                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
+            ]"
+          >
+            {{ f.label }}
+            <span
+              :class="[
+                'ml-1.5 px-1.5 py-0.5 rounded-full text-[10px]',
+                clientStatusFilter === f.id ? 'bg-slate-950/20' : 'bg-slate-800'
+              ]"
+            >
+              {{ f.id === 'todas' ? myRequests.length : myRequests.filter((r) => clientStatusGroup(r.status) === f.id).length }}
+            </span>
+          </button>
+        </div>
+
         <div v-if="myRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
           <p class="text-sm text-slate-400">Nenhum serviço solicitado até o momento.</p>
           <button
@@ -2901,9 +3565,19 @@ onMounted(() => {
           </button>
         </div>
 
+        <div v-else-if="filteredClientRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
+          <p class="text-sm text-slate-400">Nenhum pedido neste filtro.</p>
+          <button
+            @click="clientStatusFilter = 'todas'"
+            class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs hover:bg-slate-700 transition-all"
+          >
+            Ver todas
+          </button>
+        </div>
+
         <div v-else class="space-y-4">
           <div
-            v-for="req in myRequests"
+            v-for="req in filteredClientRequests"
             :key="req.id"
             class="bg-slate-900 rounded-2xl p-6 border border-slate-800 hover:border-slate-700 transition-all space-y-5"
           >
@@ -3049,6 +3723,13 @@ onMounted(() => {
             <FileText class="w-3.5 h-3.5" />
             Meus Recibos
           </button>
+          <button
+            @click="activeTab = 'historico_cliente'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
+          </button>
         </div>
 
         <div>
@@ -3097,6 +3778,122 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- MODE CLIENT: HISTÓRICO DE PEDIDOS -->
+      <div v-if="userMode === 'client' && activeTab === 'historico_cliente'" class="space-y-6 animate-in fade-in duration-300">
+        <!-- CLIENT SUB-TABS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
+          <button
+            @click="activeTab = 'solicitar'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <Bot class="w-3.5 h-3.5" />
+            Solicitar com IA
+          </button>
+          <button
+            @click="activeTab = 'meus_pedidos'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50 relative"
+          >
+            <Clock class="w-3.5 h-3.5" />
+            Meus Pedidos
+          </button>
+          <button
+            @click="activeTab = 'recibos_cliente'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <FileText class="w-3.5 h-3.5" />
+            Meus Recibos
+          </button>
+          <button
+            @click="activeTab = 'historico_cliente'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
+          </button>
+        </div>
+
+        <div>
+          <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+            <History class="w-5 h-5 text-amber-400" />
+            Histórico de Serviços
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Todos os seus pedidos concluídos ou cancelados, guardados para consulta.
+          </p>
+        </div>
+
+        <div v-if="historicClientRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
+          <History class="w-10 h-10 text-slate-600 mx-auto" />
+          <p class="text-sm text-slate-400">Nenhum serviço finalizado ainda. Concluídos e cancelados aparecem aqui.</p>
+          <button
+            @click="activeTab = 'meus_pedidos'"
+            class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs hover:bg-slate-700 transition-all"
+          >
+            Acompanhar pedidos ativos
+          </button>
+        </div>
+
+        <div v-else class="space-y-3">
+          <div
+            v-for="req in historicClientRequests"
+            :key="req.id"
+            class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-slate-700 transition-all"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <img
+                  v-if="req.photo_url"
+                  :src="req.photo_url"
+                  alt="Foto do serviço"
+                  class="w-14 h-14 rounded-xl object-cover border border-slate-800 shrink-0"
+                />
+                <div class="min-w-0">
+                  <p class="font-bold text-white text-sm truncate">{{ req.ai_analysis?.summary || req.category }}</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">
+                    {{ formatRequestDate(req.created_at) }} • {{ req.category }} • {{ findProfessional(req.professional_id)?.name || 'Broadcast' }}
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span
+                  :class="[
+                    'text-xs font-bold px-3 py-1 rounded-full border',
+                    req.status === 'Concluído'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  ]"
+                >
+                  {{ req.status }}
+                </span>
+                <span class="text-xs font-extrabold text-white bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                  R$ {{ req.final_price ?? 0 }},00
+                </span>
+              </div>
+            </div>
+            <div v-if="req.rating" class="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2 text-xs text-slate-400">
+              <Star class="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span><strong class="text-white">{{ req.rating.stars }}/5</strong> — {{ req.rating.comment }}</span>
+            </div>
+            <div class="mt-3 flex flex-col sm:flex-row gap-2">
+              <button
+                v-if="req.receipt_issued"
+                @click="viewReceiptModal = req"
+                class="flex-1 py-2 rounded-xl bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-bold hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+              >
+                <Printer class="w-3.5 h-3.5" /> Ver recibo
+              </button>
+              <button
+                v-if="req.status === 'Concluído' && !req.rating"
+                @click="rateOrderModal = req"
+                class="flex-1 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
+              >
+                <Star class="w-3.5 h-3.5" /> Avaliar serviço
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- MODE PRO: TAB 1 - PAINEL DE ATENDIMENTOS -->
       <div v-if="userMode === 'pro' && activeTab === 'pedidos_pro'" class="space-y-6 animate-in fade-in duration-300">
         <!-- PRO SUB-TABS -->
@@ -3121,6 +3918,13 @@ onMounted(() => {
           >
             <Star class="w-3.5 h-3.5" />
             Meu Perfil
+          </button>
+          <button
+            @click="activeTab = 'historico_pro'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
           </button>
         </div>
 
@@ -3195,6 +3999,23 @@ onMounted(() => {
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   {{ req.status }}
                 </span>
+              </div>
+            </div>
+
+            <!-- STEP TIMELINE (igual ao card do cliente) -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              <div
+                v-for="(step, idx) in statusSteps"
+                :key="step"
+                :class="[
+                  'p-2.5 rounded-xl border text-center transition-all',
+                  statusSteps.indexOf(req.status) >= idx
+                    ? 'bg-amber-500/10 border-amber-500/40 text-amber-300 font-bold'
+                    : 'bg-slate-950 border-slate-800 text-slate-500'
+                ]"
+              >
+                <div class="text-[10px] uppercase tracking-wider mb-0.5">Etapa {{ idx + 1 }}</div>
+                <div class="text-xs truncate">{{ step }}</div>
               </div>
             </div>
 
@@ -3299,6 +4120,13 @@ onMounted(() => {
           >
             <Star class="w-3.5 h-3.5" />
             Meu Perfil
+          </button>
+          <button
+            @click="activeTab = 'historico_pro'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
           </button>
         </div>
 
@@ -3410,6 +4238,13 @@ onMounted(() => {
             <Star class="w-3.5 h-3.5" />
             Meu Perfil
           </button>
+          <button
+            @click="activeTab = 'historico_pro'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
+          </button>
         </div>
 
         <!-- CADASTRO: Quando não há profissional cadastrado -->
@@ -3454,7 +4289,7 @@ onMounted(() => {
 
             <div class="flex gap-2">
               <button
-                @click="openProfileEditor"
+                @click="showProfileModal = true"
                 class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold hover:bg-slate-700 flex items-center gap-1.5"
               >
                 <Edit2 class="w-4 h-4 text-amber-400" />
@@ -3559,7 +4394,7 @@ onMounted(() => {
           <!-- Plan Comparison Cards -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div
-              v-for="p in PLANS"
+              v-for="p in displayPlans"
               :key="p.id"
               :class="[
                 'bg-slate-900/80 rounded-2xl p-6 border-2 transition-all flex flex-col',
@@ -3685,6 +4520,106 @@ onMounted(() => {
           </div>
         </div>
       </div>
+
+      <!-- MODE PRO: HISTÓRICO DE ATENDIMENTOS -->
+      <div v-if="userMode === 'pro' && activeTab === 'historico_pro'" class="space-y-6 animate-in fade-in duration-300">
+        <!-- PRO SUB-TABS -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
+          <button
+            @click="activeTab = 'pedidos_pro'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <SlidersHorizontal class="w-3.5 h-3.5" />
+            Painel de Atendimentos
+          </button>
+          <button
+            @click="activeTab = 'faturamento'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <TrendingUp class="w-3.5 h-3.5" />
+            Faturamento
+          </button>
+          <button
+            @click="activeTab = 'perfil_pro'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          >
+            <Star class="w-3.5 h-3.5" />
+            Meu Perfil
+          </button>
+          <button
+            @click="activeTab = 'historico_pro'"
+            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
+          >
+            <History class="w-3.5 h-3.5" />
+            Histórico
+          </button>
+        </div>
+
+        <div>
+          <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+            <History class="w-5 h-5 text-amber-400" />
+            Histórico de Atendimentos
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Serviços concluídos ou cancelados atribuídos a você, guardados para consulta.
+          </p>
+        </div>
+
+        <div v-if="historicProRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
+          <History class="w-10 h-10 text-slate-600 mx-auto" />
+          <p class="text-sm text-slate-400">Nenhum atendimento finalizado ainda. Concluídos e cancelados aparecem aqui.</p>
+          <button
+            @click="activeTab = 'pedidos_pro'"
+            class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs hover:bg-slate-700 transition-all"
+          >
+            Ver painel de atendimentos
+          </button>
+        </div>
+
+        <div v-else class="space-y-3">
+          <div
+            v-for="req in historicProRequests"
+            :key="req.id"
+            class="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:border-slate-700 transition-all"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <img
+                  v-if="req.photo_url"
+                  :src="req.photo_url"
+                  alt="Foto do serviço"
+                  class="w-14 h-14 rounded-xl object-cover border border-slate-800 shrink-0"
+                />
+                <div class="min-w-0">
+                  <p class="font-bold text-white text-sm truncate">{{ req.ai_analysis?.summary || req.category }}</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">
+                    {{ formatRequestDate(req.created_at) }} • {{ req.category }} • {{ req.client_name }}
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span
+                  :class="[
+                    'text-xs font-bold px-3 py-1 rounded-full border',
+                    req.status === 'Concluído'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                  ]"
+                >
+                  {{ req.status }}
+                </span>
+                <span class="text-xs font-extrabold text-white bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                  R$ {{ req.final_price ?? 0 }},00
+                </span>
+              </div>
+            </div>
+            <div v-if="req.rating" class="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2 text-xs text-slate-400">
+              <Star class="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+              <span><strong class="text-white">{{ req.rating.stars }}/5</strong> — {{ req.rating.comment }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <!-- UPGRADE MODAL -->
@@ -3707,7 +4642,7 @@ onMounted(() => {
           <div class="p-6 space-y-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div
-                v-for="p in PLANS"
+                v-for="p in displayPlans"
                 :key="p.id"
                 :class="[
                   'bg-slate-950/60 rounded-2xl p-4 border transition-all flex flex-col',
@@ -4009,6 +4944,17 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- MODAL DE EDIÇÃO DE PERFIL / CONTA -->
+    <ProfileEditModal
+      :open="showProfileModal"
+      :role="userMode === 'pro' ? 'pro' : 'client'"
+      :professional="proProfile"
+      :user="userProfile"
+      :categories="CATEGORIES.map(c => c.name)"
+      @close="showProfileModal = false"
+      @saved="handleProfileModalSaved"
+    />
 
     <!-- FOOTER -->
     <footer class="border-t border-slate-800/80 bg-slate-950 py-4 text-center text-xs text-slate-500">

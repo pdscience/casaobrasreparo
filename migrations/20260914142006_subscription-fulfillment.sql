@@ -1,3 +1,11 @@
+-- Fulfillment de assinaturas: webhook Stripe -> plano do profissional.
+--
+-- checkout.session.completed usa o metadata.plan gravado no checkout;
+-- customer.subscription.created/updated resolve o plano pelo price_id
+-- comparando com public.plans (fonte única);
+-- customer.subscription.deleted volta para gratuito;
+-- invoice.paid / invoice.payment_failed atualizam plan_status e expiração.
+
 CREATE OR REPLACE FUNCTION public.fulfill_professional_subscription()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -24,7 +32,7 @@ BEGIN
       LIMIT 1;
     END IF;
     IF v_subject_id IS NULL THEN
-      RAISE WARNING 'Stripe checkout.session.completed % has no resolvable billing subject', NEW.provider_event_id;
+      RAISE WARNING 'Stripe checkout.session.completed % has no resolvable billing subject', NEW.id;
       RETURN NEW;
     END IF;
 
@@ -132,6 +140,8 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS fulfill_professional_subscription_from_webhook ON payments.webhook_events;
 
 CREATE TRIGGER fulfill_professional_subscription_from_webhook
   AFTER INSERT OR UPDATE ON payments.webhook_events

@@ -31,22 +31,84 @@ function toIntegerReais(value: unknown): number {
   return typeof value === 'number' ? Math.round(value) : 0
 }
 
+function tryParseObject(text: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(text)
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>
+    }
+  } catch {
+    // tenta próxima estratégia
+  }
+  return null
+}
+
 function extractAndValidateAnalysis(content: string | undefined): Record<string, unknown> | null {
   if (!content) return null
+  const candidates: string[] = []
   const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  const candidate = (fenced ? fenced[1] : content).trim()
-  let parsed: unknown
+  if (fenced) candidates.push(fenced[1].trim())
+  candidates.push(content.trim())
+  // modelo às vezes ignora a ordem e escreve texto antes/depois: extrai o maior bloco {...}
+  const first = content.indexOf('{')
+  const last = content.lastIndexOf('}')
+  if (first >= 0 && last > first) candidates.push(content.slice(first, last + 1))
+  for (const c of candidates) {
+    const obj = tryParseObject(c.replace(/,\s*([}\]])/g, '$1'))
+    if (!obj) continue
+    let ok = true
+    for (const f of REQUIRED_ANALYSIS_FIELDS) if (!(f in obj)) { ok = false; break }
+    if (!ok) continue
+    obj.suggestedMinPrice = toIntegerReais(obj.suggestedMinPrice)
+    obj.suggestedMaxPrice = toIntegerReais(obj.suggestedMaxPrice)
+    return obj
+  }
+  return null
+}
+
+function buildSystemPrompt(): string {
+  // Prompt enxuto: a geracao completa precisa ser rápida.
+  return `Voce e um perito em orcamentos de servicos residenciais no Brasil. Responda em portugues, EXCLUSIVAMENTE com um objeto JSON valido (sem markdown), com EXATAMENTE estes campos: summary (string curta), description (string, max 2 frases), category (string), complexity ("Baixa", "Media" ou "Alta"), estimatedTime (string curta), materialsNeeded (array com no maximo 4 strings curtas), suggestedMinPrice (inteiro em R$, ex. 1200), suggestedMaxPrice (inteiro em R$), technicalNotes (string curta, pode ser vazia), recommendedAction ("Custo Direto" ou "Visita Tecnica"). Seja conciso em todos os textos.`
+}
+
+async function runNvidia(
+  apiKey: string,
+  baseUrl: string,
+  model: string,
+  userContent: Array<Record<string, unknown>>,
+  systemPrompt: string,
+  timeoutMs: number,
+): Promise<Record<string, unknown> | null> {
+  const controller = new AbortController()
+  const cutoff = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    parsed = JSON.parse(candidate)
+    const aiRes = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userContent },
+        ],
+        temperature: 0.4,
+        top_p: 1,
+        max_tokens: 512,
+        stream: false,
+      }),
+      signal: controller.signal,
+    })
+    if (!aiRes.ok) return null
+    const aiJson = (await aiRes.json()) as { choices?: Array<{ message?: { content?: string } }> }
+    return extractAndValidateAnalysis(aiJson.choices?.[0]?.message?.content)
   } catch {
     return null
+  } finally {
+    clearTimeout(cutoff)
   }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
-  const obj = parsed as Record<string, unknown>
-  for (const f of REQUIRED_ANALYSIS_FIELDS) if (!(f in obj)) return null
-  obj.suggestedMinPrice = toIntegerReais(obj.suggestedMinPrice)
-  obj.suggestedMaxPrice = toIntegerReais(obj.suggestedMaxPrice)
-  return obj
 }
 
 export default async function (req: Request): Promise<Response> {
@@ -80,10 +142,26 @@ export default async function (req: Request): Promise<Response> {
   try {
     const { imageBase64, mimeType = 'image/jpeg', category, notes } = body
     const apiKey = Deno.env.get('NVIDIA_API_KEY')
-    if (!apiKey) return new Response(JSON.stringify(getFallbackAnalysis(category, notes)), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    const preliminary = getFallbackAnalysis(category, notes)
+
+    const analysisId = crypto.randomUUID()
+    await client.database.from('service_analyses').insert([{
+      id: analysisId,
+      category: category || '',
+      notes: notes || '',
+      status: 'processing',
+      result: null,
+      image_base64: imageBase64 || null,
+    }])
+
+    if (!apiKey) {
+      await client.database.from('service_analyses').update({ status: 'ready', result: preliminary }).eq('id', analysisId)
+      return new Response(JSON.stringify({ status: 'ready', analysis: preliminary, analysisId }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const baseUrl = Deno.env.get('NVIDIA_BASE_URL') || 'https://integrate.api.nvidia.com/v1'
     const model = Deno.env.get('NVIDIA_MODEL') || 'meta/llama-3.2-11b-vision-instruct'
 
@@ -96,54 +174,28 @@ export default async function (req: Request): Promise<Response> {
         image_url: { url: `data:${mimeType};base64,${cleanBase64}` },
       })
     }
+    const systemPrompt = buildSystemPrompt()
 
-    const systemPrompt = `Voce e um assistente tecnico especializado em orcamentos para prestadores de servicos gerais no Brasil. Responda em portugues com termos claros. Responda EXCLUSIVAMENTE com um objeto JSON valido (sem markdown, sem texto antes ou depois), com EXATAMENTE estes campos e tipos:
-- summary (string): titulo sucinto do problema/servico identificado
-- description (string): descricao detalhada do diagnostico visual
-- category (string): categoria de servico recomendada
-- complexity (string): um destes valores: "Baixa", "Media" ou "Alta"
-- estimatedTime (string): estimativa de tempo de execucao (ex.: "2 a 3 horas")
-- materialsNeeded (array de strings): lista de materiais provavelmente necessarios
-- suggestedMinPrice (number): valor minimo estimado em R$, SEMPRE como numero inteiro (ex.: 1200 para R$ 1.200,00; nunca 1.2 ou "1200")
-- suggestedMaxPrice (number): valor maximo estimado em R$, SEMPRE como numero inteiro (ex.: 3000 para R$ 3.000,00; nunca 1.2 ou "3000")
-- technicalNotes (string): orientacoes ou alertas de seguranca para o profissional
-- recommendedAction (string): "Custo Direto" ou "Visita Tecnica"
-Nao inclua nenhum campo alem desses. Nao envolva o JSON em cercas de codigo. Todos os valores monetarios DEVEM ser numeros inteiros (sem casas decimais, sem moeda, sem separador de milhar); por exemplo, use 1200 e nunca 1.2, "R$ 1200" ou "1.200".`
-
-    const aiRes = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        temperature: 0.4,
-        top_p: 1,
-        max_tokens: 1024,
-        stream: false,
-      }),
-    })
-    if (!aiRes.ok) {
-      const errText = await aiRes.text().catch(() => '')
-      throw new Error(`NVIDIA HTTP ${aiRes.status}: ${errText.slice(0, 200)}`)
+    // Tentativa rápida: se a IA responder depressa, devolve o real de uma vez.
+    const fast = await runNvidia(apiKey, baseUrl, model, userContent, systemPrompt, 15000)
+    if (fast) {
+      await client.database.from('service_analyses').update({ status: 'ready', result: fast, image_base64: null }).eq('id', analysisId)
+      return new Response(JSON.stringify({ status: 'ready', analysis: fast, analysisId }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
-    const aiJson = (await aiRes.json()) as { choices?: Array<{ message?: { content?: string } }> }
-    const content = aiJson.choices?.[0]?.message?.content
-    const validated = extractAndValidateAnalysis(content)
-    const result = validated ?? getFallbackAnalysis(category, notes)
-    return new Response(JSON.stringify(result), {
+
+    // Lenta: responde o preliminar agora; o worker (schedule a cada 1 min)
+    // conclui em background e o front faz polling até status=ready.
+    return new Response(JSON.stringify({ status: 'processing', analysis: preliminary, analysisId }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error: unknown) {
-    console.error('Erro na analise tecnica do NVIDIA:', error)
+    console.error('Erro na analise tecnica:', error)
     const reqBody = (req as unknown as { body?: { category?: string; notes?: string } }).body || {}
-    return new Response(JSON.stringify(getFallbackAnalysis(reqBody.category, reqBody.notes)), {
+    return new Response(JSON.stringify({ status: 'error', analysis: getFallbackAnalysis(reqBody.category, reqBody.notes), analysisId: null }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
