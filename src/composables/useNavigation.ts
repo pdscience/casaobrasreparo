@@ -47,9 +47,17 @@ export function trackCta(label: string): void { trackEvent('cta_click', { label 
 
 export function scrollToId(id: string): void {
   goToTab('boas_vindas')
-  nextTick(() => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
+  // Com o router, a LandingView pode montar de forma assíncrona após o push;
+  // tenta até o elemento existir (sem mudar a assinatura nem o comportamento visual).
+  const attempt = (tries: number): void => {
+    const el = document.getElementById(id)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    if (tries > 0) setTimeout(() => { attempt(tries - 1) }, 50)
+  }
+  nextTick(() => { attempt(20) })
 }
 
 export function onPageScroll(): void {

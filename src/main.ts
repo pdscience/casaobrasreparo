@@ -10,9 +10,11 @@ import {
   TooltipComponent,
   LegendComponent,
 } from 'echarts/components'
+import { router } from './router'
 
 use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 const app = createApp(App)
 app.component('v-chart', VueECharts)
+app.use(router)
 app.mount('#app')

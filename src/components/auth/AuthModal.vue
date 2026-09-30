@@ -1,13 +1,38 @@
 <script setup lang="ts">
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
 import { CATEGORIES } from '../../lib/categories'
 import { X, LogIn, User, Wrench } from 'lucide-vue-next'
+
+const router = useRouter()
+const route = useRoute()
 
 const {
   showAuth, authView, authRole, authError, authLoading,
   loginEmail, loginPassword, registerForm,
   handleLogin, handleRegister,
 } = useAuth()
+
+async function consumeSavedRedirect(savedRedirect: unknown): Promise<void> {
+  // Login/registro com falha mantém o modal aberto com o erro — sem navegar.
+  if (authError.value) return
+  if (typeof savedRedirect === 'string' && savedRedirect.startsWith('/')) {
+    await router.push(savedRedirect)
+  }
+}
+
+async function onLoginSubmit(): Promise<void> {
+  // Captura ANTES: handleLogin navega via goToTab e trocaria a rota (perdendo o query).
+  const savedRedirect = route.query.redirect
+  await handleLogin()
+  await consumeSavedRedirect(savedRedirect)
+}
+
+async function onRegisterSubmit(): Promise<void> {
+  const savedRedirect = route.query.redirect
+  await handleRegister()
+  await consumeSavedRedirect(savedRedirect)
+}
 
 const logoUrl = '/logo_casa.png'
 </script>
@@ -58,7 +83,7 @@ const logoUrl = '/logo_casa.png'
         </div>
 
         <!-- LOGIN FORM -->
-        <form v-if="authView === 'login'" @submit.prevent="handleLogin" class="space-y-4">
+        <form v-if="authView === 'login'" @submit.prevent="onLoginSubmit" class="space-y-4">
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1.5">E-mail *</label>
             <input
@@ -101,7 +126,7 @@ const logoUrl = '/logo_casa.png'
         </form>
 
         <!-- REGISTER FORM -->
-        <form v-else @submit.prevent="handleRegister" class="space-y-4">
+        <form v-else @submit.prevent="onRegisterSubmit" class="space-y-4">
           <!-- ROLE TOGGLE -->
           <div>
             <label class="block text-xs font-bold text-slate-300 mb-1.5">Eu sou...</label>

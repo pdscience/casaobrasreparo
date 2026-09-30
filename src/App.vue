@@ -15,16 +15,6 @@ import OnboardingPlansModal from './components/modals/OnboardingPlansModal.vue'
 import ScheduleModal from './components/modals/ScheduleModal.vue'
 import RateModal from './components/modals/RateModal.vue'
 import ReceiptModal from './components/modals/ReceiptModal.vue'
-import LandingView from './views/landing/LandingView.vue'
-import DirectoryView from './views/professionals/DirectoryView.vue'
-import SolicitarView from './views/client/SolicitarView.vue'
-import MeusPedidosView from './views/client/MeusPedidosView.vue'
-import RecibosView from './views/client/RecibosView.vue'
-import HistoricoView from './views/client/HistoricoView.vue'
-import PedidosProView from './views/pro/PedidosProView.vue'
-import FaturamentoView from './views/pro/FaturamentoView.vue'
-import PerfilProView from './views/pro/PerfilProView.vue'
-import HistoricoProView from './views/pro/HistoricoView.vue'
 
 const {
   authUser, userProfile, userMode,
@@ -34,7 +24,7 @@ const {
 } = useAuth()
 
 const {
-  activeTab, onPageScroll,
+  onPageScroll,
 } = useNavigation()
 
 const {
@@ -67,23 +57,7 @@ onUnmounted(() => {
 
     <!-- MAIN CONTENT AREA -->
     <main :class="[isLanding ? 'flex-1 w-full' : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6']">
-      <LandingView v-if="activeTab === 'boas_vindas'" />
-      <DirectoryView v-if="activeTab === 'profissionais'" />
-      <SolicitarView v-if="userMode === 'client' && activeTab === 'solicitar'" />
-
-      <MeusPedidosView v-if="userMode === 'client' && activeTab === 'meus_pedidos'" />
-
-      <RecibosView v-if="userMode === 'client' && activeTab === 'recibos_cliente'" />
-
-      <HistoricoView v-if="userMode === 'client' && activeTab === 'historico_cliente'" />
-
-      <PedidosProView v-if="userMode === 'pro' && activeTab === 'pedidos_pro'" />
-
-      <FaturamentoView v-if="userMode === 'pro' && activeTab === 'faturamento'" />
-
-      <PerfilProView v-if="userMode === 'pro' && activeTab === 'perfil_pro'" />
-
-      <HistoricoProView v-if="userMode === 'pro' && activeTab === 'historico_pro'" />
+      <router-view />
     </main>
 
     <UpgradeModal />
