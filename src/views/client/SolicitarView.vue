@@ -9,6 +9,7 @@ import { useQuoteForm } from '../../composables/useQuoteForm'
 import ClientSubTabs from '../../components/layout/ClientSubTabs.vue'
 import ProfessionalCard from '../../components/ProfessionalCard.vue'
 import {
+  AlertTriangle,
   ArrowRight,
   Bot,
   Building2,
@@ -39,7 +40,7 @@ const { planMap, PLAN_LABELS } = usePlans()
 const {
   selectedCategory, clientName, clientPhone, clientAddress, notes,
   imagePreview, photoFile, isAnalyzing, latestAiResult, createdOrderSuccess,
-  sendMode, formError, selectedProfessional, aiReadyToast, directCandidates,
+  sendMode, formError, selectedProfessional, aiReadyToast, aiFallback, directCandidates,
   handlePhotoUpload, handleAnalyzeWithAI, handleConfirmOrder,
   handleChooseProfessional, clearProfessionalSelection,
 } = useQuoteForm()
@@ -443,6 +444,11 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   </div>
 
                   <!-- MATERIALS NEEDED -->
+                  <div v-if="aiFallback && latestAiResult"
+                    class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 flex items-start gap-2">
+                    <AlertTriangle :size="14" class="mt-0.5 shrink-0" />
+                    <span>IA indisponível — análise preliminar. Os valores sugeridos podem não refletir a realidade; confirme com o profissional.</span>
+                  </div>
                   <div class="space-y-1.5">
                     <span class="font-bold text-slate-300 text-[11px] flex items-center gap-1">
                       <CheckCircle2 class="w-3.5 h-3.5 text-amber-400" />

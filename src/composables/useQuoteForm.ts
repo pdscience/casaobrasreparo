@@ -7,6 +7,7 @@ import { useAuth } from './useAuth'
 import { useNavigation } from './useNavigation'
 import { useProfessionals } from './useProfessionals'
 import { useRequests } from './useRequests'
+import { pushToast } from './useUi'
 
 const selectedCategory = ref<string>('Eletricista')
 const clientName = ref<string>('')
@@ -81,13 +82,14 @@ function handlePhotoUpload(e: Event) {
 
 async function handleAnalyzeWithAI() {
   if (!imagePreview.value) {
-    alert('Por favor, tire ou selecione uma foto antes de solicitar a análise da IA.')
+    pushToast('warning', 'Por favor, tire ou selecione uma foto antes de solicitar a análise da IA.')
     return
   }
 
   isAnalyzing.value = true
   latestAiResult.value = null
   aiReadyToast.value = false
+  aiFallback.value = false
 
   try {
     const res = await analyzeWithAI(
@@ -96,6 +98,7 @@ async function handleAnalyzeWithAI() {
       notes.value
     )
     latestAiResult.value = res.analysis
+    aiFallback.value = res.status !== 'ready' || !(res.analysis.suggestedMinPrice > 0 || res.analysis.suggestedMaxPrice > 0)
     // Sem polling: a IA real não cabe nos 30s do proxy de forma confiável;
     // quando ela responder a tempo (status ready) o resultado já vem completo.
       aiReadyToast.value = res.status === 'ready' && (res.analysis.suggestedMinPrice > 0 || res.analysis.suggestedMaxPrice > 0)
@@ -114,6 +117,8 @@ async function handleAnalyzeWithAI() {
       technicalNotes: '',
       recommendedAction: 'Custo Direto',
     }
+    aiFallback.value = true
+    pushToast('warning', 'A IA está indisponível no momento. Mostrando uma estimativa preliminar.')
   } finally {
     isAnalyzing.value = false
   }
@@ -156,6 +161,9 @@ async function handleConfirmOrder() {
       photoUrl = await uploadServicePhoto(photoFile.value, authUser.value.id)
     } catch (err) {
       console.error('Erro ao enviar foto:', err)
+      pushToast('error', 'Não foi possível enviar a foto do serviço. Tente novamente.')
+      formError.value = 'Falha no envio da foto. Tente novamente.'
+      return
     }
   }
 

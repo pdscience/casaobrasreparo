@@ -5,6 +5,7 @@ import { User, ShieldCheck, Zap, Sparkles } from 'lucide-vue-next'
 import { useAuth } from './useAuth'
 import { useNavigation } from './useNavigation'
 import { useRequests } from './useRequests'
+import { pushToast } from './useUi'
 
 const plans = ref<Plan[]>([])
 
@@ -128,7 +129,7 @@ async function subscribePlan(targetPlan: string) {
   const { goToTab } = useNavigation()
   try {
     if (!proProfile.value.id) {
-      alert('Você precisa estar logado como profissional para assinar um plano.')
+      pushToast('warning', 'Você precisa estar logado como profissional para assinar um plano.')
       return
     }
     if (proProfile.value.plan === targetPlan) return
@@ -139,7 +140,7 @@ async function subscribePlan(targetPlan: string) {
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(proProfile.value.email)) {
-      alert('Cadastre um e-mail válido no seu perfil para assinar o plano.')
+      pushToast('warning', 'Cadastre um e-mail válido no seu perfil para assinar o plano.')
       goToTab('perfil_pro')
       return
     }
@@ -147,7 +148,7 @@ async function subscribePlan(targetPlan: string) {
     if (url) window.location.href = url
   } catch (err) {
     console.error('Erro ao assinar plano:', err)
-    alert('Erro ao assinar plano. Tente novamente.')
+    pushToast('error', 'Erro ao assinar plano. Tente novamente.')
   }
 }
 
@@ -159,7 +160,7 @@ async function handleOpenPortal() {
     if (url) window.location.href = url
   } catch (err) {
     console.error('Erro ao abrir portal de assinatura:', err)
-    alert('Erro ao abrir o portal de gerenciamento de assinatura.')
+    pushToast('error', 'Erro ao abrir o portal de gerenciamento de assinatura.')
   }
 }
 

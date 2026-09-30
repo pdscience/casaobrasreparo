@@ -4,6 +4,7 @@ import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
+import { computeMonthlySummary } from '../../lib/revenue'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import { TrendingUp, BarChart2, Lock } from 'lucide-vue-next'
 
@@ -11,6 +12,18 @@ const { userMode } = useAuth()
 const { activeTab } = useNavigation()
 const { requests } = useRequests()
 const { hasFeature, subscribePlan } = usePlans()
+
+// Primeira letra maiúscula (ex.: "setembro" → "Setembro")
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+// Decimal com vírgula (ex.: 1.1 → "1,1")
+function formatDecimal(n: number): string {
+  return n.toFixed(1).replace('.', ',')
+}
+
+const summary = computed(() => computeMonthlySummary(requests.value, new Date()))
 
 const revenueChartData = computed(() => {
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -21,6 +34,11 @@ const revenueChartData = computed(() => {
     const monthIndex = (currentMonth - 11 + i + 12) % 12
     const yearOffset = Math.floor((currentMonth - 11 + i + 12) / 12)
     const targetYear = now.getFullYear() - yearOffset
+
+    // O ponto do mês corrente usa a síntese real (concluídos do mês)
+    if (monthIndex === currentMonth && targetYear === now.getFullYear()) {
+      return { month, faturamento: summary.value.total }
+    }
 
     const total = requests.value
       .filter((r) => {
@@ -34,20 +52,6 @@ const revenueChartData = computed(() => {
   })
 })
 
-const totalRevenueMonth = computed(() => {
-  return requests.value
-    .filter((r) => r.status === 'Concluído')
-    .reduce((acc, curr) => acc + (curr.final_price || 0), 0)
-})
-
-const completedCount = computed(() => {
-  return requests.value.filter((r) => r.status === 'Concluído').length
-})
-
-const avgTicket = computed(() => {
-  return totalRevenueMonth.value / (completedCount.value || 1)
-})
-
 const revenueChartOption = computed(() => ({
   tooltip: {
     trigger: 'axis',
@@ -55,7 +59,7 @@ const revenueChartOption = computed(() => ({
     borderColor: '#334155',
     borderRadius: '12px',
     textStyle: { color: '#fff', fontSize: 12 },
-    formatter: (params: { value: number }) => `R$ ${params.value},00`,
+    formatter: (params: { value: number }) => 'R$ ' + Number(params.value).toFixed(2).replace('.', ','),
   },
   grid: { left: '3%', right: '4%', bottom: '3%' },
   xAxis: {
@@ -116,13 +120,16 @@ const revenueChartOption = computed(() => ({
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-2">
             <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
-              Faturamento Julho (Acumulado)
+              Faturamento de {{ capitalize(summary.monthLabel) }}
             </span>
             <span class="text-2xl sm:text-3xl font-black text-amber-400">
-              R$ {{ totalRevenueMonth.toLocaleString('pt-BR') }},00
+              R$ {{ summary.total.toLocaleString('pt-BR') }},00
             </span>
-            <p class="text-[11px] text-amber-400/80 font-medium flex items-center gap-1">
-              <TrendingUp class="w-3.5 h-3.5" /> +18.4% em relação ao mês anterior
+            <p v-if="summary.deltaPercent !== null" :class="[
+              'text-[11px] font-medium flex items-center gap-1',
+              summary.deltaPercent > 0 ? 'text-emerald-400' : summary.deltaPercent < 0 ? 'text-red-400' : 'text-slate-400'
+            ]">
+              <TrendingUp class="w-3.5 h-3.5" /> {{ summary.deltaPercent > 0 ? '+' : '' }}{{ summary.deltaPercent }}% vs mês anterior
             </p>
           </div>
 
@@ -131,10 +138,10 @@ const revenueChartOption = computed(() => ({
               Serviços Concluídos no Mês
             </span>
             <span class="text-2xl sm:text-3xl font-black text-white">
-              {{ completedCount }} atendimentos
+              {{ summary.completedCount }} atendimentos
             </span>
             <p class="text-[11px] text-slate-400 font-medium">
-              Média de 1.1 serviços por dia trabalhado
+              Média de {{ formatDecimal(summary.completedCount / new Date().getDate()) }} serviços por dia
             </p>
           </div>
 
@@ -143,7 +150,7 @@ const revenueChartOption = computed(() => ({
               Ticket Médio por Serviço
             </span>
             <span class="text-2xl sm:text-3xl font-black text-cyan-400">
-              R$ {{ Math.round(avgTicket) }},00
+              R$ {{ Math.round(summary.avgTicket) }},00
             </span>
             <p class="text-[11px] text-slate-400 font-medium">
               Com base em serviços residenciais e prediais
