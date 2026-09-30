@@ -5,6 +5,9 @@ coverage/
 *.log
 .env*
 !.env.example
+# Isolated workspaces & SDD scratch
+.worktrees/
+.superpowers/
 # InsForge & AI agent skills
 .insforge
 .agent
