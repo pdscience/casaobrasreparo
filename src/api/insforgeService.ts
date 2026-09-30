@@ -11,17 +11,6 @@ export async function getServiceRequests(): Promise<ServiceRequest[]> {
   return (data as ServiceRequest[]) || []
 }
 
-export async function getServiceRequest(id: string): Promise<ServiceRequest | null> {
-  const { data, error } = await insforge.database
-    .from('service_requests')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error) throw error
-  return (data as ServiceRequest) || null
-}
-
 export async function createServiceRequest(request: Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'>): Promise<ServiceRequest> {
   const { data, error } = await insforge.database
     .from('service_requests')
@@ -43,15 +32,6 @@ export async function updateServiceRequest(id: string, updates: Partial<ServiceR
 
   if (error) throw error
   return data as ServiceRequest
-}
-
-export async function deleteServiceRequest(id: string): Promise<void> {
-  const { error } = await insforge.database
-    .from('service_requests')
-    .delete()
-    .eq('id', id)
-
-  if (error) throw error
 }
 
 export async function getProfessionals(): Promise<Professional[]> {
@@ -221,87 +201,6 @@ export async function analyzeWithAI(imageBase64: string | undefined, category: s
   return data as AnalyzeResponse
 }
 
-export async function getAnalysisResult(analysisId: string): Promise<{ status: string; result: AIAnalysis | null }> {
-  const { data, error } = await insforge.database
-    .from('service_analyses')
-    .select('status, result')
-    .eq('id', analysisId)
-    .maybeSingle()
-  if (error) throw error
-  if (!data) return { status: 'error', result: null }
-  return { status: (data as { status: string }).status, result: (data as { result: AIAnalysis | null }).result }
-}
-
-export async function updateProfessionalPlan(
-  id: string,
-  plan: string,
-  planStatus: string,
-  stripeCustomerId?: string,
-  stripeSubscriptionId?: string
-): Promise<Professional> {
-  const updates: Record<string, unknown> = {
-    plan,
-    plan_status: planStatus,
-  }
-  if (stripeCustomerId) updates.stripe_customer_id = stripeCustomerId
-  if (stripeSubscriptionId) updates.stripe_subscription_id = stripeSubscriptionId
-
-  const { data, error } = await insforge.database
-    .from('professionals')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data as Professional
-}
-
-export async function incrementRequestCount(professionalId: string): Promise<void> {
-  const { data: pro, error: fetchError } = await insforge.database
-    .from('professionals')
-    .select('requests_this_month, requests_reset_at')
-    .eq('id', professionalId)
-    .single()
-
-  if (fetchError) throw fetchError
-
-  const now = new Date()
-  const resetAt = pro.requests_reset_at ? new Date(pro.requests_reset_at) : null
-  const needsReset = !resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear()
-
-  const newCount = needsReset ? 1 : (pro.requests_this_month || 0) + 1
-
-  const { error: updateError } = await insforge.database
-    .from('professionals')
-    .update({
-      requests_this_month: newCount,
-      requests_reset_at: needsReset ? now.toISOString() : pro.requests_reset_at,
-    })
-    .eq('id', professionalId)
-
-  if (updateError) throw updateError
-}
-
-export async function canCreateRequest(professionalId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
-  const { data: pro, error } = await insforge.database
-    .from('professionals')
-    .select('plan, requests_this_month, requests_reset_at')
-    .eq('id', professionalId)
-    .single()
-
-  if (error) throw error
-
-  const now = new Date()
-  const resetAt = pro.requests_reset_at ? new Date(pro.requests_reset_at) : null
-  const needsReset = !resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear()
-
-  const limit = pro.plan === 'ouro' ? Infinity : pro.plan === 'prata' ? 30 : pro.plan === 'bronze' ? 10 : 0
-  const current = needsReset ? 0 : pro.requests_this_month || 0
-
-  return { allowed: current < limit, current, limit }
-}
-
 export async function createPortalSession(professionalId: string): Promise<{ url: string }> {
   const returnUrl = `${window.location.origin}/perfil_pro`
   const { data, error } = await insforge.payments.stripe.createCustomerPortalSession('test', {
@@ -319,43 +218,6 @@ export async function changePlan(professionalId: string, targetPlan: string): Pr
   })
   if (error) throw error
   return data as { subscriptionId: string; status: string }
-}
-
-export async function getSubscriptionStatus(professionalId: string): Promise<{
-  plan: string
-  status: string
-  requestsThisMonth: number
-  requestLimit: number | null
-  planExpiresAt: string | null
-  stripeCustomerId: string | null
-}> {
-  const { data, error } = await insforge.database
-    .from('professionals')
-    .select('plan, plan_status, requests_this_month, requests_reset_at, plan_expires_at, stripe_customer_id')
-    .eq('id', professionalId)
-    .maybeSingle()
-  if (error) throw error
-  if (!data) throw new Error('Professional not found')
-
-  const now = new Date()
-  const resetAt = data.requests_reset_at ? new Date(data.requests_reset_at) : null
-  const needsReset = !resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear()
-
-  // Limite lido da tabela plans (fonte única) — request_limit NULL = ilimitado
-  const { data: planRow } = await insforge.database
-    .from('plans')
-    .select('request_limit')
-    .eq('id', data.plan)
-    .maybeSingle()
-
-  return {
-    plan: data.plan,
-    status: data.plan_status,
-    requestsThisMonth: needsReset ? 0 : data.requests_this_month || 0,
-    requestLimit: planRow ? (planRow.request_limit as number | null) : 0,
-    planExpiresAt: data.plan_expires_at,
-    stripeCustomerId: data.stripe_customer_id,
-  }
 }
 
 export async function createCheckoutSession(professionalId: string, plan: string, email: string): Promise<{ url: string }> {

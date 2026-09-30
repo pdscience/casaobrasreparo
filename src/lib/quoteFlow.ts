@@ -1,5 +1,3 @@
-import type { Professional } from '../types'
-
 export interface QuoteFormData {
   clientName: string
   clientPhone: string
@@ -26,19 +24,6 @@ export function validateQuoteForm(data: QuoteFormData): QuoteValidationErrors {
     errors.clientAddress = 'Informe o endereço do atendimento.'
   }
   return errors
-}
-
-export function isQuoteFormValid(data: QuoteFormData): boolean {
-  return Object.keys(validateQuoteForm(data)).length === 0
-}
-
-/** Filtra profissionais por categoria (usado pelo catálogo público e interno). */
-export function filterProfessionalsByCategory(
-  list: Professional[],
-  category: string,
-): Professional[] {
-  if (!category || category === 'Todas') return list
-  return list.filter((p) => p.category === category)
 }
 
 export type SendMode = 'direct' | 'broadcast'
