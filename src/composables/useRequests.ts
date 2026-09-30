@@ -50,88 +50,6 @@ const proRequests = computed(() => {
   )
 })
 
-const revenueChartData = computed(() => {
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  const now = new Date()
-  const currentMonth = now.getMonth()
-
-  return months.map((month, i) => {
-    const monthIndex = (currentMonth - 11 + i + 12) % 12
-    const yearOffset = Math.floor((currentMonth - 11 + i + 12) / 12)
-    const targetYear = now.getFullYear() - yearOffset
-
-    const total = requests.value
-      .filter((r) => {
-        if (r.status !== 'Concluído' || !r.final_price) return false
-        const d = new Date(r.created_at)
-        return d.getMonth() === monthIndex && d.getFullYear() === targetYear
-      })
-      .reduce((acc, r) => acc + (r.final_price || 0), 0)
-
-    return { month, faturamento: total }
-  })
-})
-
-const totalRevenueMonth = computed(() => {
-  return requests.value
-    .filter((r) => r.status === 'Concluído')
-    .reduce((acc, curr) => acc + (curr.final_price || 0), 0)
-})
-
-const completedCount = computed(() => {
-  return requests.value.filter((r) => r.status === 'Concluído').length
-})
-
-const avgTicket = computed(() => {
-  return totalRevenueMonth.value / (completedCount.value || 1)
-})
-
-const revenueChartOption = computed(() => ({
-  tooltip: {
-    trigger: 'axis',
-    backgroundColor: '#0f172a',
-    borderColor: '#334155',
-    borderRadius: '12px',
-    textStyle: { color: '#fff', fontSize: 12 },
-    formatter: (params: { value: number }) => `R$ ${params.value},00`,
-  },
-  grid: { left: '3%', right: '4%', bottom: '3%' },
-  xAxis: {
-    type: 'category',
-    data: revenueChartData.value.map((d) => d.month),
-    axisLabel: { color: '#64748b', fontSize: 12 },
-    axisLine: { lineStyle: { color: '#1e293b' } },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: '#64748b', fontSize: 12 },
-    axisLine: { lineStyle: { color: '#1e293b' } },
-    splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
-  },
-  series: [
-    {
-      data: revenueChartData.value.map((d) => d.faturamento),
-      type: 'line',
-      smooth: true,
-      symbol: 'none',
-      lineStyle: { color: '#f59e0b', width: 3 },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(245,158,11,0.4)' },
-            { offset: 1, color: 'rgba(245,158,11,0.0)' },
-          ],
-        },
-      },
-    },
-  ],
-}))
-
 async function loadData() {
   const { professionals } = useProfessionals()
   const { plans } = usePlans()
@@ -229,7 +147,6 @@ export function useRequests() {
     requests, isLoading,
     myRequests, filteredClientRequests, historicClientRequests, historicProRequests, proRequests,
     clientStatusFilter,
-    revenueChartData, totalRevenueMonth, completedCount, avgTicket, revenueChartOption,
     loadData,
     handleSaveSchedule, handleUpdateStatus, handleSaveRating,
   }
