@@ -1,15 +1,23 @@
-# Casa Obras e Reparos - Gestão, Orçamentos & Agendamento com IA
+# Casa Obras e Reparos — Gestão, Orçamentos & Agendamento com IA
 
 Plataforma para prestadores de serviços gerais e clientes com análise de imagem por IA, agendamento de visitas, notificações WhatsApp, recibos digitais e relatórios de faturamento.
 
-## Run Locally
+## Rodando local
 
-**Prerequisites:** Node.js
+Pré-requisitos: Node.js 20+
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in `.env` to your Gemini API key
-3. Start the API server:
-   `npx tsx server/index.ts`
-4. Run the app:
-   `npm run dev`
+1. `npm install`
+2. Copie `.env.example` para `.env` e preencha `VITE_INSFORGE_URL` e `VITE_INSFORGE_ANON_KEY`
+3. `npm run dev`
+
+## Comandos
+
+- `npm run dev` — servidor de desenvolvimento
+- `npm run build` — typecheck (vue-tsc) + build de produção
+- `npm run typecheck` — verificação de tipos (inclui `.vue`)
+- `npm run lint` — ESLint
+- `npm test` / `npm run test:watch` — testes (Vitest)
+
+## Backend
+
+Sem servidor local: auth, banco, storage, pagamentos (Stripe) e functions rodam no InsForge (`functions/`), com migrations em `migrations/`.
