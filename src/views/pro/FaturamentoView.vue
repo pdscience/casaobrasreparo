@@ -35,8 +35,8 @@ const revenueChartData = computed(() => {
     const yearOffset = Math.floor((currentMonth - 11 + i + 12) / 12)
     const targetYear = now.getFullYear() - yearOffset
 
-    // O ponto do mês corrente usa a síntese real (concluídos do mês)
-    if (monthIndex === currentMonth && targetYear === now.getFullYear()) {
+    // O ponto do mês corrente (último do eixo) usa a síntese real (concluídos do mês)
+    if (i === 11) {
       return { month, faturamento: summary.value.total }
     }
 
