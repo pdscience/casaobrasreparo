@@ -59,7 +59,7 @@ const revenueChartOption = computed(() => ({
     borderColor: '#334155',
     borderRadius: '12px',
     textStyle: { color: '#fff', fontSize: 12 },
-    formatter: (params: { value: number }) => 'R$ ' + Number(params.value).toFixed(2).replace('.', ','),
+    formatter: (params: unknown) => { const v = Array.isArray(params) ? params[0]?.value : (params as { value: number }).value; return 'R$ ' + Number(v ?? 0).toFixed(2).replace('.', ',') },
   },
   grid: { left: '3%', right: '4%', bottom: '3%' },
   xAxis: {

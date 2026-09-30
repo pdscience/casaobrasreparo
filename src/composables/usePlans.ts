@@ -58,8 +58,8 @@ const requestUsage = computed(() => {
 const canReceiveRequests = computed(() =>
   currentPlanRow.value?.receives_broadcasts ?? useAuth().proProfile.value.plan !== 'gratuito')
 
-function hasFeature(feature: string): boolean {
-  return planFeatures.value[feature as keyof typeof planFeatures.value] as boolean
+function hasFeature(feature: 'whatsappVisible' | 'advancedReports' | 'verifiedBadge'): boolean {
+  return Boolean(planFeatures.value[feature])
 }
 
 const PLANS = [
