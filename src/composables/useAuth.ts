@@ -1,0 +1,259 @@
+import { ref, computed } from 'vue'
+import type { Professional, User as UserProfile } from '../types'
+import {
+  signInAuth,
+  signUpAuth,
+  signOutAuth,
+  getCurrentAuthUser,
+  getUserByAuthId,
+  createUserRecord,
+  createProfessional,
+  getProfessionalByAuthId,
+} from '../api/insforgeService'
+import { useNavigation } from './useNavigation'
+import { useUi } from './useUi'
+import { useProfessionals } from './useProfessionals'
+
+const proProfile = ref<Professional>({
+  id: '',
+  name: '',
+  category: '',
+  email: '',
+  phone: '',
+  rating: 0,
+  reviews_count: 0,
+  avatar: '',
+  pix_key: '',
+  bio: '',
+  coverage_bairros: [],
+  cidade: '',
+  uf: '',
+  plan: 'gratuito',
+  plan_status: 'active',
+  stripe_customer_id: null,
+  stripe_subscription_id: null,
+  plan_expires_at: null,
+  requests_this_month: 0,
+  requests_reset_at: null,
+})
+
+const authUser = ref<{ id: string; email: string; name?: string | null } | null>(null)
+const userProfile = ref<UserProfile | null>(null)
+const authLoading = ref(false)
+const authError = ref('')
+const showAuth = ref(false)
+const authView = ref<'login' | 'register'>('login')
+const authRole = ref<'client' | 'pro'>('client')
+
+const loginEmail = ref('')
+const loginPassword = ref('')
+
+const registerForm = ref({
+  name: '',
+  email: '',
+  password: '',
+  birth_date: '',
+  address: '',
+  bairro: '',
+  cidade: '',
+  uf: '',
+  category: '',
+})
+
+const isRegistering = ref<boolean>(false)
+const showProfileModal = ref<boolean>(false)
+
+const userMode = computed<'client' | 'pro' | null>(() => userProfile.value?.role ?? null)
+const isLanding = computed(() => !authUser.value && useNavigation().activeTab.value === 'boas_vindas')
+
+async function hydrateAuth() {
+  try {
+    const user = await getCurrentAuthUser()
+    if (!user) return
+    authUser.value = user
+    try {
+      userProfile.value = await getUserByAuthId(user.id)
+    } catch {
+      userProfile.value = null
+    }
+    if (userProfile.value?.role === 'pro') {
+      await loadProfessionalProfile(user.id)
+    }
+  } catch {
+    authUser.value = null
+  }
+}
+
+async function loadProfessionalProfile(authId: string) {
+  try {
+    const pro = await getProfessionalByAuthId(authId)
+    if (pro) proProfile.value = pro
+  } catch {
+    // profile missing is handled by the UI
+  }
+}
+
+async function handleLogin() {
+  const { goToTab } = useNavigation()
+  authError.value = ''
+  authLoading.value = true
+  try {
+    const user = await signInAuth(loginEmail.value.trim(), loginPassword.value)
+    authUser.value = user
+    try {
+      userProfile.value = await getUserByAuthId(user.id)
+    } catch {
+      userProfile.value = null
+    }
+    if (userProfile.value?.role === 'pro') {
+      await loadProfessionalProfile(user.id)
+    }
+    goToTab(userProfile.value
+      ? (userProfile.value.role === 'pro' ? 'pedidos_pro' : 'solicitar')
+      : 'boas_vindas')
+    showAuth.value = false
+    loginEmail.value = ''
+    loginPassword.value = ''
+  } catch (err) {
+    authError.value = err instanceof Error ? err.message : 'Falha ao entrar. Verifique e-mail e senha.'
+  } finally {
+    authLoading.value = false
+  }
+}
+
+async function handleRegister() {
+  const { goToTab } = useNavigation()
+  authError.value = ''
+  if (registerForm.value.password.length < 6) {
+    authError.value = 'A senha deve ter pelo menos 6 caracteres.'
+    return
+  }
+  authLoading.value = true
+  try {
+    const { user, requireEmailVerification } = await signUpAuth(
+      registerForm.value.email.trim(),
+      registerForm.value.password,
+      registerForm.value.name.trim()
+    )
+    if (!user) {
+      authError.value = requireEmailVerification
+        ? 'Conta criada! Verifique seu e-mail para ativar o acesso.'
+        : 'Não foi possível criar a conta.'
+      return
+    }
+    authUser.value = user
+    const record = await createUserRecord({
+      auth_id: user.id,
+      role: authRole.value,
+      name: registerForm.value.name.trim(),
+      email: registerForm.value.email.trim(),
+      birth_date: registerForm.value.birth_date,
+      address: registerForm.value.address,
+      bairro: registerForm.value.bairro,
+      cidade: registerForm.value.cidade,
+      uf: registerForm.value.uf,
+      category: authRole.value === 'pro' ? registerForm.value.category : '',
+    })
+    userProfile.value = record
+    if (authRole.value === 'pro') {
+      const pro = await createProfessional({
+        auth_id: user.id,
+        name: registerForm.value.name.trim(),
+        category: registerForm.value.category,
+        email: registerForm.value.email.trim(),
+        phone: '',
+        rating: 0,
+        reviews_count: 0,
+        avatar: '',
+        pix_key: '',
+        bio: '',
+        coverage_bairros: [],
+        cidade: '',
+        uf: '',
+        plan: 'gratuito',
+        plan_status: 'active',
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+        plan_expires_at: null,
+        requests_this_month: 0,
+        requests_reset_at: null,
+      })
+      proProfile.value = pro
+      useUi().showOnboardingPlans.value = true
+    }
+    goToTab(authRole.value === 'pro' ? 'pedidos_pro' : 'solicitar')
+    showAuth.value = false
+    registerForm.value = { name: '', email: '', password: '', birth_date: '', address: '', bairro: '', cidade: '', uf: '', category: '' }
+    authRole.value = 'client'
+    authView.value = 'login'
+  } catch (err) {
+    authError.value = err instanceof Error ? err.message : 'Falha ao criar a conta.'
+  } finally {
+    authLoading.value = false
+  }
+}
+
+async function handleLogout() {
+  const { goToTab } = useNavigation()
+  const { resetDirectoryFilters, directoryPage } = useProfessionals()
+  try {
+    await signOutAuth()
+  } catch {
+    // ignore sign-out errors
+  }
+  authUser.value = null
+  userProfile.value = null
+  proProfile.value = {
+    id: '',
+    name: '',
+    category: '',
+    email: '',
+    phone: '',
+    rating: 0,
+    reviews_count: 0,
+    avatar: '',
+    pix_key: '',
+    bio: '',
+    coverage_bairros: [],
+    cidade: '',
+    uf: '',
+    plan: 'gratuito',
+    plan_status: 'active',
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    plan_expires_at: null,
+    requests_this_month: 0,
+    requests_reset_at: null,
+  }
+  resetDirectoryFilters()
+  directoryPage.value = 1
+  goToTab('boas_vindas')
+}
+
+function handleHeaderProfileClick() {
+  showProfileModal.value = true
+}
+
+function handleProfileModalSaved(payload: Professional | UserProfile) {
+  if (userMode.value === 'pro') {
+    proProfile.value = { ...proProfile.value, ...(payload as Professional) }
+  } else if (payload) {
+    userProfile.value = payload as UserProfile
+  }
+}
+
+export function useAuth() {
+  return {
+    authUser, userProfile, userMode, authLoading, authError,
+    showAuth, authView, authRole,
+    loginEmail, loginPassword, registerForm, isRegistering,
+    proProfile,
+    showProfileModal,
+    isLanding,
+    hydrateAuth,
+    handleLogin, handleRegister, handleLogout,
+    loadProfessionalProfile,
+    handleHeaderProfileClick,
+    handleProfileModalSaved,
+  }
+}

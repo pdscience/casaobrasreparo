@@ -2,7 +2,18 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { trackEvent, buildWhatsAppLink, getWhatsAppNumber } from './lib/analytics'
+import { trackEvent, getWhatsAppNumber } from './lib/analytics'
+import { buildWhatsAppLink } from './lib/whatsapp'
+import { CATEGORIES, CATEGORY_UNLISTED } from './lib/categories'
+import { statusSteps, clientStatusGroup, formatRequestDate } from './lib/requestStatus'
+import { useAuth } from './composables/useAuth'
+import { useNavigation } from './composables/useNavigation'
+import { useRequests } from './composables/useRequests'
+import { useProfessionals } from './composables/useProfessionals'
+import { usePlans } from './composables/usePlans'
+import { useQuoteForm } from './composables/useQuoteForm'
+import { useUi } from './composables/useUi'
+import { uploadProfessionalAvatar, updateProfessional, createProfessional } from './api/insforgeService'
 import {
   Wrench,
   Camera,
@@ -29,8 +40,6 @@ import {
   BarChart2,
   Zap,
   Building2,
-  Sliders,
-  ThumbsUp,
   Edit2,
   CheckSquare,
   SlidersHorizontal,
@@ -40,68 +49,67 @@ import {
   MessageCircle,
   Handshake,
   History,
-  Hammer,
-  Droplets,
   HardHat,
   LogIn,
   LogOut,
   LayoutDashboard,
   ChevronDown,
   BadgeCheck,
-  Flame,
-  Trees,
-  Refrigerator,
-  Sofa,
-  Tv,
-  Layers,
-  Grid2x2,
-  Fence,
-  Home,
-  Gem,
-  LayoutGrid,
-  Bug,
-  Paintbrush,
-  Monitor,
 } from 'lucide-vue-next'
-import type { AIAnalysis, Professional, ServiceRequest, Plan, User as UserProfile } from './types'
-import { analyzeWithAI, getServiceRequests, createServiceRequest, updateServiceRequest, getProfessionals, createProfessional, updateProfessional, getProfessionalByAuthId, uploadProfessionalAvatar, uploadServicePhoto, createPortalSession, changePlan, createCheckoutSession, getPlans, signUpAuth, signInAuth, signOutAuth, getCurrentAuthUser, getUserByAuthId, createUserRecord } from './api/insforgeService'
 import ProfessionalCard from './components/ProfessionalCard.vue'
 import ProfileEditModal from './components/ProfileEditModal.vue'
-import { validateQuoteForm, buildQuotePayload, type SendMode } from './lib/quoteFlow'
 
-const CATEGORIES = [
-  { name: 'Eletricista', icon: Zap, gradient: 'from-amber-600 to-yellow-500', accent: 'text-amber-300', img: 'https://images.pexels.com/photos/257736/pexels-photo-257736.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Encanador', icon: Wrench, gradient: 'from-blue-600 to-cyan-500', accent: 'text-blue-300', img: 'https://images.pexels.com/photos/32588548/pexels-photo-32588548.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Pintor', icon: Sparkles, gradient: 'from-yellow-500 to-orange-400', accent: 'text-yellow-300', img: 'https://images.pexels.com/photos/994164/pexels-photo-994164.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Ar-Condicionado', icon: RefreshCw, gradient: 'from-cyan-500 to-teal-400', accent: 'text-cyan-300', img: 'https://images.pexels.com/photos/32497161/pexels-photo-32497161.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Marceneiro', icon: Building2, gradient: 'from-orange-600 to-amber-500', accent: 'text-orange-300', img: 'https://images.pexels.com/photos/5974296/pexels-photo-5974296.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Pedreiro / Reformas', icon: ShieldCheck, gradient: 'from-stone-600 to-stone-400', accent: 'text-stone-300', img: 'https://images.pexels.com/photos/1216589/pexels-photo-1216589.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Chaveiro', icon: Sliders, gradient: 'from-purple-600 to-violet-500', accent: 'text-purple-300', img: 'https://images.pexels.com/photos/101808/pexels-photo-101808.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Limpeza Geral', icon: ThumbsUp, gradient: 'from-rose-500 to-pink-400', accent: 'text-rose-300', img: 'https://images.pexels.com/photos/5591860/pexels-photo-5591860.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Gás', icon: Flame, gradient: 'from-red-600 to-orange-500', accent: 'text-red-300', img: 'https://images.pexels.com/photos/3722212/pexels-photo-3722212.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Jardinagem', icon: Trees, gradient: 'from-green-600 to-emerald-500', accent: 'text-green-300', img: 'https://images.pexels.com/photos/38936344/pexels-photo-38936344.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Eletrodomésticos', icon: Refrigerator, gradient: 'from-sky-600 to-blue-500', accent: 'text-sky-300', img: 'https://images.pexels.com/photos/34734504/pexels-photo-34734504.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Montagem de Móveis', icon: Sofa, gradient: 'from-indigo-600 to-violet-500', accent: 'text-indigo-300', img: 'https://images.pexels.com/photos/4554417/pexels-photo-4554417.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Instalação de TV', icon: Tv, gradient: 'from-slate-600 to-sky-600', accent: 'text-sky-300', img: 'https://images.pexels.com/photos/6020432/pexels-photo-6020432.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Gesso e Drywall', icon: Layers, gradient: 'from-slate-500 to-zinc-400', accent: 'text-slate-300', img: 'https://images.pexels.com/photos/4981812/pexels-photo-4981812.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Vidros e Espelhos', icon: Grid2x2, gradient: 'from-teal-500 to-sky-400', accent: 'text-teal-300', img: 'https://images.pexels.com/photos/3615723/pexels-photo-3615723.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Grades e Portões', icon: Fence, gradient: 'from-neutral-600 to-zinc-400', accent: 'text-neutral-300', img: 'https://images.pexels.com/photos/13278911/pexels-photo-13278911.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Telhado e Calhas', icon: Home, gradient: 'from-red-500 to-rose-400', accent: 'text-red-300', img: 'https://images.pexels.com/photos/38524253/pexels-photo-38524253.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Impermeabilização', icon: Droplets, gradient: 'from-blue-500 to-indigo-500', accent: 'text-blue-300', img: 'https://images.pexels.com/photos/39238328/pexels-photo-39238328.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Marmoraria', icon: Gem, gradient: 'from-purple-500 to-fuchsia-400', accent: 'text-purple-300', img: 'https://images.pexels.com/photos/14225905/pexels-photo-14225905.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Azulejista', icon: LayoutGrid, gradient: 'from-slate-500 to-cyan-600', accent: 'text-cyan-300', img: 'https://images.pexels.com/photos/8293686/pexels-photo-8293686.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Controle de Pragas', icon: Bug, gradient: 'from-lime-600 to-green-600', accent: 'text-lime-300', img: 'https://images.pexels.com/photos/19789837/pexels-photo-19789837.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Limpeza Pós-Obra', icon: Paintbrush, gradient: 'from-pink-500 to-rose-400', accent: 'text-pink-300', img: 'https://images.pexels.com/photos/3616735/pexels-photo-3616735.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Marido de Aluguel', icon: Hammer, gradient: 'from-yellow-600 to-lime-500', accent: 'text-yellow-300', img: 'https://images.pexels.com/photos/17063686/pexels-photo-17063686.jpeg?auto=compress&cs=tinysrgb&w=400' },
-  { name: 'Informática', icon: Monitor, gradient: 'from-violet-600 to-indigo-500', accent: 'text-violet-300', img: 'https://images.pexels.com/photos/10558599/pexels-photo-10558599.jpeg?auto=compress&cs=tinysrgb&w=400' },
-]
+const {
+  authUser, userProfile, userMode, authLoading, authError,
+  showAuth, authView, authRole,
+  loginEmail, loginPassword, registerForm, isRegistering,
+  proProfile, showProfileModal, isLanding,
+  hydrateAuth, handleLogin, handleRegister, handleLogout,
+  handleHeaderProfileClick, handleProfileModalSaved,
+} = useAuth()
 
-const statusSteps = ['Pendente', 'Visita Agendada', 'Em Execução', 'Concluído']
+const {
+  activeTab, isScrolled, activeSection, teslaSections,
+  goToModule, openProfessionalsPage, scrollToId, trackCta, onPageScroll,
+} = useNavigation()
 
-const userMode = computed<'client' | 'pro' | null>(() => userProfile.value?.role ?? null)
-const activeTab = ref<string>('boas_vindas')
+const {
+  requests, isLoading,
+  myRequests, filteredClientRequests, historicClientRequests, historicProRequests, proRequests,
+  clientStatusFilter,
+  totalRevenueMonth, completedCount, avgTicket, revenueChartOption,
+  loadData, handleSaveSchedule, handleUpdateStatus, handleSaveRating,
+} = useRequests()
 
-const CATEGORY_UNLISTED = 'Serviço que não está na lista'
+const {
+  findProfessional,
+  filterCategory, filterPlan, filterUf, filterCidade, filterBairro,
+  directoryPage,
+  availableCategories, availableUfs, availableCidades, availableBairros,
+  filteredProfessionals, totalPages, paginatedProfessionals,
+  prataBronzeCount, visibleProfessionals, resetDirectoryFilters,
+} = useProfessionals()
+
+const {
+  displayPlans, requestUsage, canReceiveRequests,
+  planMap, upgradeRecommendation, hasFeature,
+  planLimitText, dbPlanPrice, PLAN_LABELS, PLAN_PRICES,
+  subscribePlan, handleOpenPortal,
+} = usePlans()
+
+const {
+  selectedCategory, clientName, clientPhone, clientAddress, notes,
+  imagePreview, photoFile, isAnalyzing, latestAiResult, createdOrderSuccess,
+  sendMode, formError, selectedProfessional, aiReadyToast, directCandidates,
+  handlePhotoUpload, handleAnalyzeWithAI, handleConfirmOrder,
+  handleChooseProfessional, clearProfessionalSelection,
+} = useQuoteForm()
+
+const {
+  viewReceiptModal, rateOrderModal, scheduleModal,
+  showUpgradeModal, showOnboardingPlans, isMobileMenuOpen,
+  ratingStars, ratingComment, scheduleDate, scheduleTime, schedulePrice, scheduleObs,
+} = useUi()
 
 const contactForm = ref({
   name: '',
@@ -137,7 +145,7 @@ const handleContactSubmit = () => {
 
   trackEvent('lead_whatsapp', { category: isUnlisted ? 'categoria_sugerida' : (category || 'geral'), subject: subject || '' })
   try {
-    window.open(buildWhatsAppLink(waMessage, getWhatsAppNumber()), '_blank', 'noopener')
+    window.open(buildWhatsAppLink(getWhatsAppNumber(), waMessage), '_blank', 'noopener')
   } catch { /* noop */ }
 
   setTimeout(() => {
@@ -149,14 +157,8 @@ const handleContactSubmit = () => {
 }
 
 // ---------- Landing premium (página única) ----------
-const isLanding = computed(() => !authUser.value && activeTab.value === 'boas_vindas')
 const heroVideoUrl = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_HERO_VIDEO_URL || ''
 const openFaq = ref<number | null>(0)
-function planLimitText(id: string, fallback: string): string {
-  const row = planMap.value.get(id)
-  if (!row) return fallback
-  return row.request_limit === null ? 'ilimitados' : `${row.request_limit}/mês`
-}
 const faqs = computed(() => [
   { q: 'Como funciona o orçamento com IA?', a: 'Você envia uma foto do problema, escolhe a categoria e a IA gera diagnóstico, materiais, tempo estimado e faixa de preço. Depois você envia para profissionais Ouro ou para toda a base.' },
   { q: 'Preciso pagar para pedir um orçamento?', a: 'Não. Cliente não paga nada para solicitar. Você só combina o valor diretamente com o profissional via WhatsApp.' },
@@ -166,65 +168,6 @@ const faqs = computed(() => [
 ])
 const partnerLogos = ['Eletricistas PRO', 'Hidráulica Prime', 'Pinturas & Cia', 'ClimaFrio', 'Marcenaria Alto Padrão', 'Reforma Fácil', 'Chave Ouro 24h', 'Limpa Total']
 
-// Tesla stack: seções fullscreen + nav flutuante + dots
-const isScrolled = ref(false)
-const activeSection = ref('inicio')
-const teslaSections = [
-  { id: 'inicio', label: 'Início' },
-  { id: 'servicos-eletrica', label: 'Elétrica & Hidráulica' },
-  { id: 'servicos-reforma', label: 'Pintura & Reformas' },
-  { id: 'contato', label: 'Contato' },
-]
-function onPageScroll() {
-  isScrolled.value = window.scrollY > 24
-  // dots: acha seção mais visível
-  let current = 'inicio'
-  for (const s of teslaSections) {
-    const el = document.getElementById(s.id)
-    if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) current = s.id
-  }
-  activeSection.value = current
-}
-
-const PROFESSIONALS_ROUTE = '#/profissionais'
-
-function scrollToId(id: string) {
-  activeTab.value = 'boas_vindas'
-  nextTick(() => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
-}
-
-function openProfessionalsPage() {
-  activeTab.value = 'profissionais'
-  window.scrollTo({ top: 0 })
-}
-
-watch(activeTab, (tab) => {
-  const shouldHaveRoute = tab === 'profissionais'
-  const hasRoute = window.location.hash === PROFESSIONALS_ROUTE
-  if (shouldHaveRoute && !hasRoute) {
-    window.history.pushState({ tab: 'profissionais' }, '', PROFESSIONALS_ROUTE)
-  } else if (!shouldHaveRoute && hasRoute) {
-    window.history.replaceState({}, '', window.location.pathname + window.location.search)
-  }
-})
-
-function syncTabFromRoute() {
-  if (window.location.hash === PROFESSIONALS_ROUTE) {
-    activeTab.value = 'profissionais'
-    window.scrollTo({ top: 0 })
-  } else if (activeTab.value === 'profissionais') {
-    activeTab.value = 'boas_vindas'
-  }
-}
-
-function onRoutePopstate() {
-  syncTabFromRoute()
-}
-function trackCta(label: string) {
-  trackEvent('cta_click', { label })
-}
 function handleTilt(e: MouseEvent) {
   const el = e.currentTarget as HTMLElement | null
   if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -287,330 +230,6 @@ function initPremiumMotion() {
     })
   } catch { /* GSAP opcional */ }
 }
-const requests = ref<ServiceRequest[]>([])
-const myRequests = computed(() =>
-  authUser.value
-    ? requests.value.filter((r) => r.client_id === authUser.value?.id)
-    : []
-)
-// Filtro de acompanhamento do cliente: pendentes / em andamento / concluídas
-const clientStatusFilter = ref<'todas' | 'pendentes' | 'andamento' | 'concluidas'>('todas')
-function clientStatusGroup(status: ServiceRequest['status']): 'pendentes' | 'andamento' | 'concluidas' {
-  if (status === 'Pendente') return 'pendentes'
-  if (status === 'Concluído' || status === 'Cancelado') return 'concluidas'
-  return 'andamento'
-}
-const filteredClientRequests = computed(() =>
-  clientStatusFilter.value === 'todas'
-    ? myRequests.value
-    : myRequests.value.filter((r) => clientStatusGroup(r.status) === clientStatusFilter.value)
-)
-// Histórico (armazenados): finalizados de cada lado
-const historicClientRequests = computed(() =>
-  myRequests.value.filter((r) => r.status === 'Concluído' || r.status === 'Cancelado')
-)
-const historicProRequests = computed(() =>
-  proProfile.value.id
-    ? requests.value.filter((r) =>
-        r.professional_id === proProfile.value.id &&
-        (r.status === 'Concluído' || r.status === 'Cancelado')
-      )
-    : []
-)
-function formatRequestDate(iso: string | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-const professionals = ref<Professional[]>([])
-const proProfile = ref<Professional>({
-  id: '',
-  name: '',
-  category: '',
-  email: '',
-  phone: '',
-  rating: 0,
-  reviews_count: 0,
-  avatar: '',
-  pix_key: '',
-  bio: '',
-  coverage_bairros: [],
-  cidade: '',
-  uf: '',
-  plan: 'gratuito',
-  plan_status: 'active',
-  stripe_customer_id: null,
-  stripe_subscription_id: null,
-  plan_expires_at: null,
-  requests_this_month: 0,
-  requests_reset_at: null,
-})
-const isLoading = ref(true)
-
-const selectedCategory = ref<string>('Eletricista')
-const clientName = ref<string>('')
-const clientPhone = ref<string>('')
-const clientAddress = ref<string>('')
-const notes = ref<string>('')
-const imagePreview = ref<string | null>(null)
-const photoFile = ref<File | null>(null)
-const isAnalyzing = ref<boolean>(false)
-const latestAiResult = ref<AIAnalysis | null>(null)
-const createdOrderSuccess = ref<ServiceRequest | null>(null)
-
-const viewReceiptModal = ref<ServiceRequest | null>(null)
-
-function printReceipt() {
-  window.print()
-}
-
-const rateOrderModal = ref<ServiceRequest | null>(null)
-const scheduleModal = ref<ServiceRequest | null>(null)
-const ratingStars = ref<number>(5)
-const ratingComment = ref<string>('')
-
-const scheduleDate = ref<string>('')
-const scheduleTime = ref<string>('14:00')
-const schedulePrice = ref<string>('')
-const scheduleObs = ref<string>('')
-
-const showUpgradeModal = ref<boolean>(false)
-const showOnboardingPlans = ref<boolean>(false)
-
-const isEditingProfile = ref<boolean>(false)
-const isRegistering = ref<boolean>(false)
-const showProfileModal = ref<boolean>(false)
-
-const authUser = ref<{ id: string; email: string; name?: string | null } | null>(null)
-const userProfile = ref<UserProfile | null>(null)
-const authLoading = ref(false)
-const authError = ref('')
-const showAuth = ref(false)
-const authView = ref<'login' | 'register'>('login')
-const authRole = ref<'client' | 'pro'>('client')
-
-const loginEmail = ref('')
-const loginPassword = ref('')
-
-const registerForm = ref({
-  name: '',
-  email: '',
-  password: '',
-  birth_date: '',
-  address: '',
-  bairro: '',
-  cidade: '',
-  uf: '',
-  category: '',
-})
-
-async function hydrateAuth() {
-  try {
-    const user = await getCurrentAuthUser()
-    if (!user) return
-    authUser.value = user
-    try {
-      userProfile.value = await getUserByAuthId(user.id)
-    } catch {
-      userProfile.value = null
-    }
-    if (userProfile.value?.role === 'pro') {
-      await loadProfessionalProfile(user.id)
-    }
-  } catch {
-    authUser.value = null
-  }
-}
-
-function goToModule(role: 'client' | 'pro', view: 'login' | 'register' = 'login') {
-  if (authUser.value && userProfile.value?.role === role) {
-    activeTab.value = role === 'client' ? 'solicitar' : 'pedidos_pro'
-    return
-  }
-  authRole.value = role
-  authView.value = view
-  authError.value = ''
-  showAuth.value = true
-}
-
-async function loadProfessionalProfile(authId: string) {
-  try {
-    const pro = await getProfessionalByAuthId(authId)
-    if (pro) proProfile.value = pro
-  } catch {
-    // profile missing is handled by the UI
-  }
-}
-
-async function handleLogin() {
-  authError.value = ''
-  authLoading.value = true
-  try {
-    const user = await signInAuth(loginEmail.value.trim(), loginPassword.value)
-    authUser.value = user
-    try {
-      userProfile.value = await getUserByAuthId(user.id)
-    } catch {
-      userProfile.value = null
-    }
-    if (userProfile.value?.role === 'pro') {
-      await loadProfessionalProfile(user.id)
-    }
-    activeTab.value = userProfile.value
-      ? (userProfile.value.role === 'pro' ? 'pedidos_pro' : 'solicitar')
-      : 'boas_vindas'
-    showAuth.value = false
-    loginEmail.value = ''
-    loginPassword.value = ''
-  } catch (err) {
-    authError.value = err instanceof Error ? err.message : 'Falha ao entrar. Verifique e-mail e senha.'
-  } finally {
-    authLoading.value = false
-  }
-}
-
-async function handleRegister() {
-  authError.value = ''
-  if (registerForm.value.password.length < 6) {
-    authError.value = 'A senha deve ter pelo menos 6 caracteres.'
-    return
-  }
-  authLoading.value = true
-  try {
-    const { user, requireEmailVerification } = await signUpAuth(
-      registerForm.value.email.trim(),
-      registerForm.value.password,
-      registerForm.value.name.trim()
-    )
-    if (!user) {
-      authError.value = requireEmailVerification
-        ? 'Conta criada! Verifique seu e-mail para ativar o acesso.'
-        : 'Não foi possível criar a conta.'
-      return
-    }
-    authUser.value = user
-    const record = await createUserRecord({
-      auth_id: user.id,
-      role: authRole.value,
-      name: registerForm.value.name.trim(),
-      email: registerForm.value.email.trim(),
-      birth_date: registerForm.value.birth_date,
-      address: registerForm.value.address,
-      bairro: registerForm.value.bairro,
-      cidade: registerForm.value.cidade,
-      uf: registerForm.value.uf,
-      category: authRole.value === 'pro' ? registerForm.value.category : '',
-    })
-    userProfile.value = record
-    if (authRole.value === 'pro') {
-      const pro = await createProfessional({
-        auth_id: user.id,
-        name: registerForm.value.name.trim(),
-        category: registerForm.value.category,
-        email: registerForm.value.email.trim(),
-        phone: '',
-        rating: 0,
-        reviews_count: 0,
-        avatar: '',
-        pix_key: '',
-        bio: '',
-        coverage_bairros: [],
-        cidade: '',
-        uf: '',
-        plan: 'gratuito',
-        plan_status: 'active',
-        stripe_customer_id: null,
-        stripe_subscription_id: null,
-        plan_expires_at: null,
-        requests_this_month: 0,
-        requests_reset_at: null,
-      })
-      proProfile.value = pro
-      showOnboardingPlans.value = true
-    }
-    activeTab.value = authRole.value === 'pro' ? 'pedidos_pro' : 'solicitar'
-    showAuth.value = false
-    registerForm.value = { name: '', email: '', password: '', birth_date: '', address: '', bairro: '', cidade: '', uf: '', category: '' }
-    authRole.value = 'client'
-    authView.value = 'login'
-  } catch (err) {
-    authError.value = err instanceof Error ? err.message : 'Falha ao criar a conta.'
-  } finally {
-    authLoading.value = false
-  }
-}
-
-async function handleLogout() {
-  try {
-    await signOutAuth()
-  } catch {
-    // ignore sign-out errors
-  }
-  authUser.value = null
-  userProfile.value = null
-  proProfile.value = {
-    id: '',
-    name: '',
-    category: '',
-    email: '',
-    phone: '',
-    rating: 0,
-    reviews_count: 0,
-    avatar: '',
-    pix_key: '',
-    bio: '',
-    coverage_bairros: [],
-    cidade: '',
-    uf: '',
-    plan: 'gratuito',
-    plan_status: 'active',
-    stripe_customer_id: null,
-    stripe_subscription_id: null,
-    plan_expires_at: null,
-    requests_this_month: 0,
-    requests_reset_at: null,
-  }
-  resetDirectoryFilters()
-  directoryPage.value = 1
-  activeTab.value = 'boas_vindas'
-}
-
-const planMap = computed(() => {
-  const m = new Map<string, Plan>()
-  for (const p of plans.value) m.set(p.id, p)
-  return m
-})
-
-const visibleProfessionals = computed(() => {
-  const visibleIds = plans.value.filter(p => p.client_visible).map(p => p.id)
-  return professionals.value
-    .filter(p => visibleIds.includes(p.plan))
-    .sort((a, b) => {
-      const ra = planMap.value.get(a.plan)?.rank ?? 99
-      const rb = planMap.value.get(b.plan)?.rank ?? 99
-      if (ra !== rb) return ra - rb
-      if (b.rating !== a.rating) return b.rating - a.rating
-      return (b.reviews_count ?? 0) - (a.reviews_count ?? 0)
-    })
-})
-
-const selectedProfessional = ref<Professional | null>(null)
-// Profissionais elegíveis à escolha direta na categoria atual do formulário
-const directCandidates = computed(() => {
-  const list = visibleProfessionals.value.filter(p =>
-    !selectedCategory.value || p.category === selectedCategory.value
-  )
-  return list.length > 0 ? list : visibleProfessionals.value
-})
-const sendMode = ref<SendMode | null>(null)
-const formError = ref<string>('')
-const prataBronzeCount = computed(() =>
-  visibleProfessionals.value.filter(p => {
-    const rank = planMap.value.get(p.plan)?.rank
-    return rank === 2 || rank === 3
-  }).length
-)
 
 function handleLandingCategory(categoryName: string) {
   trackCta('categoria_' + categoryName)
@@ -620,111 +239,7 @@ function handleLandingCategory(categoryName: string) {
   if (activeTab.value !== 'profissionais') openProfessionalsPage()
 }
 
-function handleChooseProfessional(pro: Professional) {
-  trackCta('escolher_profissional_' + pro.id)
-  selectedProfessional.value = pro
-  if (pro.category) {
-    selectedCategory.value = pro.category
-    filterCategory.value = pro.category
-  }
-  sendMode.value = 'direct'
-  formError.value = ''
-  // Visitante: pede login/cadastro mas preserva a escolha; logado: vai ao formulário
-  if (!authUser.value) {
-    authRole.value = 'client'
-    authView.value = 'register'
-    authError.value = ''
-    showAuth.value = true
-    return
-  }
-  activeTab.value = 'solicitar'
-  nextTick(() => {
-    document.getElementById('solicitar-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
-}
-
-function clearProfessionalSelection() {
-  selectedProfessional.value = null
-  if (sendMode.value === 'direct') sendMode.value = null
-}
-
-const filterCategory = ref<string>('Todas')
-const filterPlan = ref<string>('Todos')
-const filterUf = ref<string>('Todas')
-const filterCidade = ref<string>('Todas')
-const filterBairro = ref<string>('Todos')
-const directoryPage = ref<number>(1)
-const CARDS_PER_PAGE = 12
-
-const normalizeFilter = (value: string) => value.trim().toLowerCase()
-
-function resetDirectoryFilters() {
-  filterCategory.value = 'Todas'
-  filterPlan.value = 'Todos'
-  filterUf.value = 'Todas'
-  filterCidade.value = 'Todas'
-  filterBairro.value = 'Todos'
-}
-
-const availableCategories = computed(() => {
-  const cats = new Set(professionals.value.map(p => p.category).filter(Boolean))
-  return ['Todas', ...Array.from(cats).sort()]
-})
-
-const availableUfs = computed(() => {
-  const ufs = new Set(professionals.value.map(p => (p.uf || '').trim().toUpperCase()).filter(Boolean))
-  return ['Todas', ...Array.from(ufs).sort()]
-})
-
-const availableCidades = computed(() => {
-  const cidades = new Set(professionals.value.map(p => (p.cidade || '').trim()).filter(Boolean))
-  return ['Todas', ...Array.from(cidades).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
-})
-
-const availableBairros = computed(() => {
-  const bairros = new Set(
-    professionals.value.flatMap(p => (p.coverage_bairros ?? []).map(b => b.trim()).filter(Boolean)),
-  )
-  return ['Todos', ...Array.from(bairros).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
-})
-
-const filteredProfessionals = computed(() => {
-  let list = visibleProfessionals.value
-  if (filterCategory.value !== 'Todas') {
-    list = list.filter(p => p.category === filterCategory.value)
-  }
-  if (filterPlan.value !== 'Todos') {
-    list = list.filter(p => p.plan === filterPlan.value)
-  }
-  if (filterUf.value !== 'Todas') {
-    list = list.filter(p => (p.uf || '').trim().toUpperCase() === filterUf.value)
-  }
-  if (filterCidade.value !== 'Todas') {
-    list = list.filter(p => normalizeFilter(p.cidade || '') === normalizeFilter(filterCidade.value))
-  }
-  if (filterBairro.value !== 'Todos') {
-    const target = normalizeFilter(filterBairro.value)
-    list = list.filter(p => {
-      const coverage = (p.coverage_bairros ?? []).map(b => b.trim()).filter(Boolean)
-      // Sem bairro declarado o prestador atende toda a região
-      if (coverage.length === 0) return true
-      return coverage.some(b => normalizeFilter(b) === target)
-    })
-  }
-  return list
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredProfessionals.value.length / CARDS_PER_PAGE)))
-
-const paginatedProfessionals = computed(() => {
-  const start = (directoryPage.value - 1) * CARDS_PER_PAGE
-  return filteredProfessionals.value.slice(start, start + CARDS_PER_PAGE)
-})
-
-watch([filterCategory, filterPlan, filterUf, filterCidade, filterBairro], () => {
-  directoryPage.value = 1
-})
-
+const isEditingProfile = ref<boolean>(false)
 const editProName = ref<string>('')
 const editProCategory = ref<string>('')
 const editProPhone = ref<string>('')
@@ -734,30 +249,10 @@ const editProBio = ref<string>('')
 const avatarFile = ref<File | null>(null)
 const avatarPreview = ref<string | null>(null)
 
-const plans = ref<Plan[]>([])
-
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const logoUrl = '/logo_casa.png'
 const lojaUrl = '/loja.png'
-
-async function loadData() {
-  isLoading.value = true
-  try {
-    const [serviceRequests, professionalsData, plansData] = await Promise.all([
-      getServiceRequests(),
-      getProfessionals(),
-      getPlans(),
-    ])
-    requests.value = serviceRequests
-    professionals.value = professionalsData
-    plans.value = plansData
-  } catch (err) {
-    console.error('Erro ao carregar dados:', err)
-  } finally {
-    isLoading.value = false
-  }
-}
 
 function openProfileEditor() {
   editProName.value = proProfile.value.name
@@ -769,28 +264,6 @@ function openProfileEditor() {
   avatarFile.value = null
   avatarPreview.value = null
   isEditingProfile.value = true
-}
-
-function handleHeaderProfileClick() {
-  if (userMode.value === 'client') {
-    showProfileModal.value = true
-    return
-  }
-  if (userMode.value === 'pro') {
-    if (proProfile.value.id) {
-      showProfileModal.value = true
-    } else {
-      activeTab.value = 'perfil_pro'
-    }
-  }
-}
-
-function handleProfileModalSaved(payload: Professional | UserProfile) {
-  if (userMode.value === 'pro') {
-    proProfile.value = { ...proProfile.value, ...(payload as Professional) }
-  } else if (payload) {
-    userProfile.value = payload as UserProfile
-  }
 }
 
 function handleAvatarUpload(e: Event) {
@@ -858,251 +331,8 @@ async function handleSaveProfile() {
   }
 }
 
-async function handleConfirmOrder() {
-  if (!latestAiResult.value || !sendMode.value) return
-  formError.value = ''
-
-  // Login no fim: visitante escolhe antes, autentica ao confirmar
-  if (!authUser.value) {
-    authRole.value = 'client'
-    authView.value = 'register'
-    authError.value = ''
-    showAuth.value = true
-    return
-  }
-
-  const errors = validateQuoteForm({
-    clientName: clientName.value,
-    clientPhone: clientPhone.value,
-    clientAddress: clientAddress.value,
-  })
-  if (Object.keys(errors).length > 0) {
-    formError.value = errors.clientName || errors.clientPhone || errors.clientAddress || 'Verifique os dados.'
-    return
-  }
-
-  if (sendMode.value === 'direct' && !selectedProfessional.value) {
-    formError.value = 'Escolha um profissional para envio direto.'
-    return
-  }
-
-  let photoUrl = imagePreview.value || ''
-  if (photoFile.value) {
-    try {
-      photoUrl = await uploadServicePhoto(photoFile.value, authUser.value.id)
-    } catch (err) {
-      console.error('Erro ao enviar foto:', err)
-    }
-  }
-
-  const payload = buildQuotePayload({
-    clientId: authUser.value?.id ?? null,
-    form: { clientName: clientName.value, clientPhone: clientPhone.value, clientAddress: clientAddress.value },
-    category: selectedCategory.value,
-    photoUrl,
-    notes: notes.value || '',
-    aiAnalysis: latestAiResult.value,
-    finalPrice: latestAiResult.value.suggestedMinPrice || null,
-    sendMode: sendMode.value,
-    professionalId: selectedProfessional.value?.id ?? null,
-  })
-  const newOrder = payload as unknown as Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'>
-
-  try {
-    const created = await createServiceRequest(newOrder)
-    requests.value = [created, ...requests.value]
-
-    if (sendMode.value === 'direct' && selectedProfessional.value?.phone) {
-      const pro = selectedProfessional.value
-      const msg = `Olá ${pro.name}! Vi seu perfil na Casa Obra e Reparos.\n\nPreciso de um serviço de *${selectedCategory.value}*.\n${latestAiResult.value!.description}\n\nPode me enviar uma proposta?`
-      const cleanPhone = pro.phone.replace(/\D/g, '')
-      const formattedPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone
-      window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank')
-    }
-
-    resetForm()
-    activeTab.value = 'meus_pedidos'
-  } catch (err) {
-    console.error('Erro ao criar pedido:', err)
-    formError.value = `Não foi possível enviar o pedido. ${err instanceof Error ? err.message : 'Erro de conexão com o servidor.'}`
-  }
-}
-
-function resetForm() {
-  latestAiResult.value = null
-  aiReadyToast.value = false
-  selectedProfessional.value = null
-  sendMode.value = null
-  formError.value = ''
-  imagePreview.value = null
-  photoFile.value = null
-  notes.value = ''
-  clientName.value = ''
-  clientPhone.value = ''
-  clientAddress.value = ''
-  selectedCategory.value = 'Eletricista'
-}
-
-async function handleSaveSchedule() {
-  if (!scheduleModal.value) return
-
-  try {
-    // Ao assumir (agendar) um broadcast sem dono, o pedido passa a ser deste profissional
-    const assumeOwner = !scheduleModal.value.professional_id && proProfile.value.id
-      ? { professional_id: proProfile.value.id }
-      : {}
-    await updateServiceRequest(scheduleModal.value.id, {
-      status: 'Visita Agendada',
-      ...assumeOwner,
-      agendamento: {
-        data: scheduleDate.value || new Date().toISOString().split('T')[0],
-        hora: scheduleTime.value || '14:00',
-        observacao: scheduleObs.value,
-      },
-      final_price: schedulePrice.value ? parseFloat(schedulePrice.value) : scheduleModal.value.final_price,
-    })
-    await loadData()
-    scheduleModal.value = null
-  } catch (err) {
-    console.error('Erro ao agendar:', err)
-    alert('Não foi possível agendar a visita. Tente novamente.')
-  }
-}
-
-async function handleUpdateStatus(orderId: string, newStatus: ServiceRequest['status']) {
-  try {
-    const req = requests.value.find((r) => r.id === orderId)
-    if (!req) return
-
-    // Garante dono ao avançar um broadcast sem dono (histórico do pro depende disso)
-    const assumeOwner = !req.professional_id && proProfile.value.id
-      ? { professional_id: proProfile.value.id }
-      : {}
-    await updateServiceRequest(orderId, {
-      status: newStatus,
-      ...assumeOwner,
-      receipt_issued: newStatus === 'Concluído' ? true : req.receipt_issued,
-    })
-    await loadData()
-  } catch (err) {
-    console.error('Erro ao atualizar status:', err)
-    alert('Não foi possível atualizar o status do pedido. Tente novamente.')
-  }
-}
-
-async function handleSaveRating() {
-  if (!rateOrderModal.value) return
-
-  try {
-    await updateServiceRequest(rateOrderModal.value.id, {
-      rating: {
-        stars: ratingStars.value,
-        comment: ratingComment.value || 'Excelente serviço!',
-        date: new Date().toISOString().split('T')[0],
-      },
-    })
-    await loadData()
-    rateOrderModal.value = null
-    ratingStars.value = 5
-    ratingComment.value = ''
-  } catch (err) {
-    console.error('Erro ao salvar avaliação:', err)
-    alert('Não foi possível salvar a avaliação. Tente novamente.')
-  }
-}
-
-async function subscribePlan(targetPlan: string) {
-  try {
-    if (!proProfile.value.id) {
-      alert('Você precisa estar logado como profissional para assinar um plano.')
-      return
-    }
-    if (proProfile.value.plan === targetPlan) return
-    const hasActiveSubscription = !!proProfile.value.stripe_subscription_id && proProfile.value.plan_status === 'active'
-    if (hasActiveSubscription) {
-      await changePlan(proProfile.value.id, targetPlan)
-      await loadData()
-      return
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(proProfile.value.email)) {
-      alert('Cadastre um e-mail válido no seu perfil para assinar o plano.')
-      activeTab.value = 'perfil_pro'
-      return
-    }
-    const { url } = await createCheckoutSession(proProfile.value.id, targetPlan, proProfile.value.email)
-    if (url) window.location.href = url
-  } catch (err) {
-    console.error('Erro ao assinar plano:', err)
-    alert('Erro ao assinar plano. Tente novamente.')
-  }
-}
-
-async function handleOpenPortal() {
-  try {
-    if (!proProfile.value.id) return
-    const { url } = await createPortalSession(proProfile.value.id)
-    if (url) window.location.href = url
-  } catch (err) {
-    console.error('Erro ao abrir portal de assinatura:', err)
-    alert('Erro ao abrir o portal de gerenciamento de assinatura.')
-  }
-}
-
-const isMobileMenuOpen = ref<boolean>(false)
-
-function handlePhotoUpload(e: Event) {
-  const target = e.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    photoFile.value = file
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      imagePreview.value = reader.result as string
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-const aiReadyToast = ref(false)
-
-async function handleAnalyzeWithAI() {
-  if (!imagePreview.value) {
-    alert('Por favor, tire ou selecione uma foto antes de solicitar a análise da IA.')
-    return
-  }
-
-  isAnalyzing.value = true
-  latestAiResult.value = null
-  aiReadyToast.value = false
-
-  try {
-    const res = await analyzeWithAI(
-      imagePreview.value.startsWith('data:') ? imagePreview.value : undefined,
-      selectedCategory.value,
-      notes.value
-    )
-    latestAiResult.value = res.analysis
-    // Sem polling: a IA real não cabe nos 30s do proxy de forma confiável;
-    // quando ela responder a tempo (status ready) o resultado já vem completo.
-      aiReadyToast.value = res.status === 'ready' && (res.analysis.suggestedMinPrice > 0 || res.analysis.suggestedMaxPrice > 0)
-    if (aiReadyToast.value) setTimeout(() => { aiReadyToast.value = false }, 6000)
-  } catch (err) {
-    console.error(err)
-    latestAiResult.value = {
-      summary: `Avaliação de Serviço: ${selectedCategory.value}`,
-      description: `Diagnóstico prévio para ${selectedCategory.value}. Requer inspeção técnica das instalações.`,
-      category: selectedCategory.value,
-      complexity: 'Média',
-      estimatedTime: '1 a 2 horas',
-      materialsNeeded: ['Peças e insumos específicos de reposição', 'Insumos de fixação e isolamento'],
-      suggestedMinPrice: 0,
-      suggestedMaxPrice: 0,
-      technicalNotes: '',
-      recommendedAction: 'Custo Direto',
-    }
-  } finally {
-    isAnalyzing.value = false
-  }
+function printReceipt() {
+  window.print()
 }
 
 function getWhatsAppLink(phone: string, text: string) {
@@ -1111,210 +341,12 @@ function getWhatsAppLink(phone: string, text: string) {
   return `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`
 }
 
-function findProfessional(id: string | null): Professional | undefined {
-  if (!id) return undefined
-  return professionals.value.find(p => p.id === id)
-}
-
-const revenueChartData = computed(() => {
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  const now = new Date()
-  const currentMonth = now.getMonth()
-
-  return months.map((month, i) => {
-    const monthIndex = (currentMonth - 11 + i + 12) % 12
-    const yearOffset = Math.floor((currentMonth - 11 + i + 12) / 12)
-    const targetYear = now.getFullYear() - yearOffset
-
-    const total = requests.value
-      .filter((r) => {
-        if (r.status !== 'Concluído' || !r.final_price) return false
-        const d = new Date(r.created_at)
-        return d.getMonth() === monthIndex && d.getFullYear() === targetYear
-      })
-      .reduce((acc, r) => acc + (r.final_price || 0), 0)
-
-    return { month, faturamento: total }
-  })
-})
-
-const totalRevenueMonth = computed(() => {
-  return requests.value
-    .filter((r) => r.status === 'Concluído')
-    .reduce((acc, curr) => acc + (curr.final_price || 0), 0)
-})
-
-const completedCount = computed(() => {
-  return requests.value.filter((r) => r.status === 'Concluído').length
-})
-
-const avgTicket = computed(() => {
-  return totalRevenueMonth.value / (completedCount.value || 1)
-})
-
-const revenueChartOption = computed(() => ({
-  tooltip: {
-    trigger: 'axis',
-    backgroundColor: '#0f172a',
-    borderColor: '#334155',
-    borderRadius: '12px',
-    textStyle: { color: '#fff', fontSize: 12 },
-    formatter: (params: { value: number }) => `R$ ${params.value},00`,
-  },
-  grid: { left: '3%', right: '4%', bottom: '3%' },
-  xAxis: {
-    type: 'category',
-    data: revenueChartData.value.map((d) => d.month),
-    axisLabel: { color: '#64748b', fontSize: 12 },
-    axisLine: { lineStyle: { color: '#1e293b' } },
-  },
-  yAxis: {
-    type: 'value',
-    axisLabel: { color: '#64748b', fontSize: 12 },
-    axisLine: { lineStyle: { color: '#1e293b' } },
-    splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
-  },
-  series: [
-    {
-      data: revenueChartData.value.map((d) => d.faturamento),
-      type: 'line',
-      smooth: true,
-      symbol: 'none',
-      lineStyle: { color: '#f59e0b', width: 3 },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(245,158,11,0.4)' },
-            { offset: 1, color: 'rgba(245,158,11,0.0)' },
-          ],
-        },
-      },
-    },
-  ],
-}))
-
-const currentPlanRow = computed(() => planMap.value.get(proProfile.value.plan) ?? null)
-
-const planFeatures = computed(() => {
-  const plan = proProfile.value.plan
-  const row = currentPlanRow.value
-  // Limites e visibilidade vêm da tabela plans (fonte única); request_limit NULL = ilimitado
-  const maxRequests = row ? (row.request_limit === null ? Infinity : row.request_limit) : 0
-  return {
-    maxRequests,
-    prioritySearch: plan === 'ouro' || plan === 'prata',
-    verifiedBadge: plan === 'ouro',
-    advancedReports: plan === 'ouro',
-    whatsappVisible: row ? row.show_whatsapp_to_client : false,
-    isGratuito: plan === 'gratuito',
-    isBronze: plan === 'bronze',
-    isPrata: plan === 'prata',
-    isOuro: plan === 'ouro',
-  }
-})
-
-const requestUsage = computed(() => {
-  const current = proProfile.value.requests_this_month || 0
-  const limit = planFeatures.value.maxRequests
-  return {
-    current,
-    limit,
-    percentage: limit === Infinity ? 0 : (current / limit) * 100,
-    isNearLimit: limit !== Infinity && current >= limit - 2,
-    isAtLimit: limit !== Infinity && current >= limit,
-  }
-})
-
-const canReceiveRequests = computed(() => currentPlanRow.value?.receives_broadcasts ?? proProfile.value.plan !== 'gratuito')
-
-const proRequests = computed(() => {
-  if (!canReceiveRequests.value) return []
-  const category = proProfile.value.category?.toLowerCase()
-  return requests.value.filter((r) =>
-    r.status !== 'Concluído' &&
-    (r.broadcast || r.professional_id === proProfile.value.id) &&
-    (!category || r.category?.toLowerCase() === category)
-  )
-})
-
-function hasFeature(feature: string): boolean {
-  return planFeatures.value[feature as keyof typeof planFeatures.value] as boolean
-}
-
-const PLANS = [
-  { id: 'gratuito', name: 'Gratuito', price: 'R$0', icon: User, tagline: 'Apenas cadastro do perfil', features: ['Cadastro profissional gratuito', 'Perfil público básico'], cta: 'Começar Grátis' },
-  { id: 'bronze', name: 'Bronze', price: 'R$34,90', icon: ShieldCheck, tagline: 'Para começar a atender', features: ['10 pedidos por mês', 'Até 5 fotos', '1 categoria de serviço'], cta: 'Assinar Bronze' },
-  { id: 'prata', name: 'Prata', price: 'R$54,90', icon: Zap, tagline: 'Para crescer com visibilidade', features: ['30 pedidos por mês', 'Perfil completo', 'WhatsApp no perfil', 'Avaliações', 'Prioridade nas buscas'], cta: 'Assinar Prata' },
-  { id: 'ouro', name: 'Ouro', price: 'R$79,90', icon: Sparkles, tagline: 'O máximo para dominar a região', features: ['Pedidos ilimitados', 'Destaque nas pesquisas', 'Selo verificado', 'Estatísticas avançadas', 'Múltiplas categorias', 'Anúncios patrocinados'], cta: 'Assinar Ouro' },
-]
-
-const PLAN_LABELS: Record<string, string> = {
-  gratuito: 'Gratuito',
-  bronze: 'Bronze',
-  prata: 'Prata',
-  ouro: 'Ouro',
-}
-
-// Preços exibidos vêm de plans.monthly_price (fonte única); fallback = valor do seed
-function formatBRL(cents: number | null | undefined, fallback: string): string {
-  if (cents === null || cents === undefined) return fallback
-  if (cents === 0) return 'R$0'
-  return `R$${(cents / 100).toFixed(2).replace('.', ',')}`
-}
-function dbPlanPrice(id: string, fallback: string): string {
-  const row = planMap.value.get(id)
-  return row ? formatBRL(row.monthly_price, fallback) : fallback
-}
-const PLAN_PRICES = computed<Record<string, string>>(() => ({
-  gratuito: dbPlanPrice('gratuito', 'R$0'),
-  bronze: dbPlanPrice('bronze', 'R$34,90'),
-  prata: dbPlanPrice('prata', 'R$54,90'),
-  ouro: dbPlanPrice('ouro', 'R$79,90'),
-}))
-
-// Limite da feature ("N pedidos por mês" / "Pedidos ilimitados") lido do banco
-function withDbLimit(planId: string, feature: string): string {
-  const row = planMap.value.get(planId)
-  if (!row) return feature
-  if (/^\d+\s+pedidos por mês$/.test(feature)) {
-    return row.request_limit === null ? 'Pedidos ilimitados' : `${row.request_limit} pedidos por mês`
-  }
-  if (feature === 'Pedidos ilimitados' && row.request_limit !== null) {
-    return `${row.request_limit} pedidos por mês`
-  }
-  return feature
-}
-
-// PLANS com preço/limite mesclados do banco (copy de marketing mantida no resto)
-const displayPlans = computed(() =>
-  PLANS.map((p) => ({
-    ...p,
-    price: dbPlanPrice(p.id, p.price),
-    features: p.features.map((f) => withDbLimit(p.id, f)),
-  }))
-)
-
-const upgradeRecommendation = computed(() => {
-  const current = proProfile.value.plan
-  const order: Record<string, number> = { gratuito: 0, bronze: 1, prata: 2, ouro: 3 }
-  const next = displayPlans.value.find((p) => order[p.id] === order[current] + 1)
-  if (!next) return null
-  return { plan: next.id, label: next.name, price: next.price, features: next.features }
-})
-
 onMounted(() => {
   loadData()
   hydrateAuth()
-  syncTabFromRoute()
   trackEvent('page_view_landing', { path: window.location.pathname })
   window.addEventListener('pointermove', onCursorMove, { passive: true })
   window.addEventListener('scroll', onPageScroll, { passive: true })
-  window.addEventListener('popstate', onRoutePopstate)
   onPageScroll()
   nextTick(() => initPremiumMotion())
   // Re-inicializa reveals quando a landing entra em cena
@@ -1326,11 +358,9 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('pointermove', onCursorMove)
   window.removeEventListener('scroll', onPageScroll)
-  window.removeEventListener('popstate', onRoutePopstate)
   try { gsapCtx?.revert?.() } catch { /* noop */ }
 })
 </script>
-
 <template>
   <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
     <div ref="cursorGlow" id="cursor-glow" aria-hidden="true"></div>

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { Professional, Plan } from '../types'
 import { Star, MessageCircle, X, MapPin, FileText, User } from 'lucide-vue-next'
+import { buildWhatsAppLink } from '../lib/whatsapp'
 
 const props = defineProps<{
   professional: Professional
@@ -22,11 +23,6 @@ const cityLine = computed(() => {
   return city || uf || ''
 })
 
-function getWhatsAppLink(phone: string, text: string) {
-  const clean = phone.replace(/\D/g, '')
-  const formatted = clean.length <= 11 ? `55${clean}` : clean
-  return `https://wa.me/${formatted}?text=${encodeURIComponent(text)}`
-}
 </script>
 
 <template>
@@ -110,7 +106,7 @@ function getWhatsAppLink(phone: string, text: string) {
     <div class="flex items-center gap-2 p-4 pt-0 border-t border-slate-800 mt-auto">
       <a
         v-if="planInfo?.show_whatsapp_to_client && professional.phone"
-        :href="getWhatsAppLink(professional.phone, 'Olá! Gostaria de um orçamento.')"
+        :href="buildWhatsAppLink(professional.phone, 'Olá! Gostaria de um orçamento.')"
         target="_blank"
         rel="noopener noreferrer"
         class="flex-1 px-3 py-2 rounded-xl bg-green-600 text-white text-[11px] font-bold hover:bg-green-500 transition-all flex items-center justify-center gap-1.5"

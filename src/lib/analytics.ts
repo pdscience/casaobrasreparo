@@ -42,8 +42,3 @@ export function getWhatsAppNumber(): string {
   return env.VITE_WHATSAPP_NUMBER || '5511999999999'
 }
 
-export function buildWhatsAppLink(message: string, phone?: string): string {
-  const raw = (phone || getWhatsAppNumber()).replace(/\D/g, '')
-  const formatted = raw.length <= 11 ? `55${raw}` : raw
-  return `https://wa.me/${formatted}?text=${encodeURIComponent(message)}`
-}
