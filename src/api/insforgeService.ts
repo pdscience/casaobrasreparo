@@ -65,7 +65,21 @@ export async function getProfessionalByAuthId(authId: string): Promise<Professio
   return (data as Professional) || null
 }
 
-export async function createProfessional(professional: Omit<Professional, 'id'>): Promise<Professional> {
+type ProfessionalDbDefaults =
+  | 'rating'
+  | 'reviews_count'
+  | 'plan'
+  | 'plan_status'
+  | 'stripe_customer_id'
+  | 'stripe_subscription_id'
+  | 'plan_expires_at'
+  | 'requests_this_month'
+  | 'requests_reset_at'
+
+type CreateProfessionalInput = Omit<Professional, 'id' | ProfessionalDbDefaults> &
+  Partial<Pick<Professional, ProfessionalDbDefaults>>
+
+export async function createProfessional(professional: CreateProfessionalInput): Promise<Professional> {
   const { data, error } = await insforge.database
     .from('professionals')
     .insert([{ ...professional, id: crypto.randomUUID() }])

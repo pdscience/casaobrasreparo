@@ -360,6 +360,11 @@ const latestAiResult = ref<AIAnalysis | null>(null)
 const createdOrderSuccess = ref<ServiceRequest | null>(null)
 
 const viewReceiptModal = ref<ServiceRequest | null>(null)
+
+function printReceipt() {
+  window.print()
+}
+
 const rateOrderModal = ref<ServiceRequest | null>(null)
 const scheduleModal = ref<ServiceRequest | null>(null)
 const ratingStars = ref<number>(5)
@@ -3251,7 +3256,7 @@ onUnmounted(() => {
               <div class="md:col-span-3 space-y-2 flex flex-col justify-center">
                 <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
                   <span class="text-[10px] text-slate-400 block uppercase">Sugestão de Preço IA</span>
-                  <span v-if="req.ai_analysis?.suggestedMinPrice > 0 || req.ai_analysis?.suggestedMaxPrice > 0" class="text-base font-extrabold text-white">
+                  <span v-if="(req.ai_analysis?.suggestedMinPrice ?? 0) > 0 || (req.ai_analysis?.suggestedMaxPrice ?? 0) > 0" class="text-base font-extrabold text-white">
                     R$ {{ req.ai_analysis?.suggestedMinPrice }} ~ R$ {{ req.ai_analysis?.suggestedMaxPrice }}
                   </span>
                   <span v-else class="text-xs font-bold text-slate-200">
@@ -4141,7 +4146,7 @@ onUnmounted(() => {
         <!-- MODAL ACTIONS -->
         <div class="flex gap-2">
           <button
-            @click="window.print()"
+            @click="printReceipt"
             class="flex-1 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
           >
             <Printer class="w-4 h-4" /> Imprimir ou Salvar PDF
