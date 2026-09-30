@@ -13,7 +13,6 @@ import { useProfessionals } from './composables/useProfessionals'
 import { usePlans } from './composables/usePlans'
 import { useQuoteForm } from './composables/useQuoteForm'
 import { useUi } from './composables/useUi'
-import { uploadProfessionalAvatar, updateProfessional, createProfessional } from './api/insforgeService'
 import {
   Wrench,
   Camera,
@@ -44,32 +43,37 @@ import {
   CheckSquare,
   SlidersHorizontal,
   Smartphone,
-  Menu,
   Lock,
   MessageCircle,
   Handshake,
   History,
   HardHat,
-  LogIn,
-  LogOut,
-  LayoutDashboard,
   ChevronDown,
   BadgeCheck,
 } from 'lucide-vue-next'
 import ProfessionalCard from './components/ProfessionalCard.vue'
 import ProfileEditModal from './components/ProfileEditModal.vue'
+import AppHeader from './components/layout/AppHeader.vue'
+import AppFooter from './components/layout/AppFooter.vue'
+import ClientSubTabs from './components/layout/ClientSubTabs.vue'
+import ProSubTabs from './components/layout/ProSubTabs.vue'
+import ToastHost from './components/layout/ToastHost.vue'
+import AuthModal from './components/auth/AuthModal.vue'
+import UpgradeModal from './components/modals/UpgradeModal.vue'
+import OnboardingPlansModal from './components/modals/OnboardingPlansModal.vue'
+import ScheduleModal from './components/modals/ScheduleModal.vue'
+import RateModal from './components/modals/RateModal.vue'
+import ReceiptModal from './components/modals/ReceiptModal.vue'
 
 const {
-  authUser, userProfile, userMode, authLoading, authError,
-  showAuth, authView, authRole,
-  loginEmail, loginPassword, registerForm, isRegistering,
+  authUser, userProfile, userMode,
+  showAuth,
   proProfile, showProfileModal, isLanding,
-  hydrateAuth, handleLogin, handleRegister, handleLogout,
-  handleHeaderProfileClick, handleProfileModalSaved,
+  hydrateAuth, handleProfileModalSaved,
 } = useAuth()
 
 const {
-  activeTab, isScrolled, activeSection, teslaSections,
+  activeTab, activeSection, teslaSections,
   goToModule, openProfessionalsPage, scrollToId, trackCta, onPageScroll,
 } = useNavigation()
 
@@ -78,7 +82,7 @@ const {
   myRequests, filteredClientRequests, historicClientRequests, historicProRequests, proRequests,
   clientStatusFilter,
   totalRevenueMonth, completedCount, avgTicket, revenueChartOption,
-  loadData, handleSaveSchedule, handleUpdateStatus, handleSaveRating,
+  loadData, handleUpdateStatus,
 } = useRequests()
 
 const {
@@ -92,7 +96,7 @@ const {
 
 const {
   displayPlans, requestUsage, canReceiveRequests,
-  planMap, upgradeRecommendation, hasFeature,
+  planMap, hasFeature,
   planLimitText, dbPlanPrice, PLAN_LABELS, PLAN_PRICES,
   subscribePlan, handleOpenPortal,
 } = usePlans()
@@ -107,8 +111,7 @@ const {
 
 const {
   viewReceiptModal, rateOrderModal, scheduleModal,
-  showUpgradeModal, showOnboardingPlans, isMobileMenuOpen,
-  ratingStars, ratingComment, scheduleDate, scheduleTime, schedulePrice, scheduleObs,
+  ratingStars, schedulePrice,
 } = useUi()
 
 const contactForm = ref({
@@ -239,101 +242,9 @@ function handleLandingCategory(categoryName: string) {
   if (activeTab.value !== 'profissionais') openProfessionalsPage()
 }
 
-const isEditingProfile = ref<boolean>(false)
-const editProName = ref<string>('')
-const editProCategory = ref<string>('')
-const editProPhone = ref<string>('')
-const editProEmail = ref<string>('')
-const editProPix = ref<string>('')
-const editProBio = ref<string>('')
-const avatarFile = ref<File | null>(null)
-const avatarPreview = ref<string | null>(null)
-
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-const logoUrl = '/logo_casa.png'
 const lojaUrl = '/loja.png'
-
-function openProfileEditor() {
-  editProName.value = proProfile.value.name
-  editProCategory.value = proProfile.value.category
-  editProPhone.value = proProfile.value.phone
-  editProEmail.value = proProfile.value.email || ''
-  editProPix.value = proProfile.value.pix_key
-  editProBio.value = proProfile.value.bio
-  avatarFile.value = null
-  avatarPreview.value = null
-  isEditingProfile.value = true
-}
-
-function handleAvatarUpload(e: Event) {
-  const target = e.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (file) {
-    avatarFile.value = file
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      avatarPreview.value = reader.result as string
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-async function handleSaveProfile() {
-  const phoneDigits = editProPhone.value.replace(/\D/g, '')
-  if (phoneDigits.length < 10 || phoneDigits.length > 11) {
-    alert('Informe um telefone válido com DDD (10 ou 11 dígitos).')
-    return
-  }
-
-  try {
-    const ownerId = authUser.value?.id
-    let avatarUrl = proProfile.value.avatar
-    if (avatarFile.value) {
-      if (!ownerId) {
-        alert('Faça login novamente para enviar a foto do perfil.')
-        return
-      }
-      avatarUrl = await uploadProfessionalAvatar(avatarFile.value, ownerId)
-    }
-
-    const payload = {
-      name: editProName.value,
-      category: editProCategory.value,
-      phone: editProPhone.value,
-      email: editProEmail.value,
-      pix_key: editProPix.value,
-      bio: editProBio.value,
-      coverage_bairros: proProfile.value.coverage_bairros ?? [],
-      cidade: proProfile.value.cidade ?? '',
-      uf: proProfile.value.uf ?? '',
-      avatar: avatarUrl,
-    }
-
-    if (proProfile.value.id) {
-      await updateProfessional(proProfile.value.id, payload)
-      proProfile.value = { ...proProfile.value, ...payload }
-    } else {
-      if (!ownerId) {
-        alert('Faça login novamente para salvar o perfil.')
-        return
-      }
-      const created = await createProfessional({ ...payload, auth_id: ownerId })
-      proProfile.value = created
-    }
-    isEditingProfile.value = false
-    isRegistering.value = false
-    avatarFile.value = null
-    avatarPreview.value = null
-  } catch (err) {
-    console.error('Erro ao salvar perfil:', err)
-    alert('Não foi possível salvar o perfil. Tente novamente.')
-  }
-}
-
-function printReceipt() {
-  window.print()
-}
 
 function getWhatsAppLink(phone: string, text: string) {
   const cleanPhone = phone.replace(/\D/g, '')
@@ -364,352 +275,9 @@ onUnmounted(() => {
 <template>
   <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
     <div ref="cursorGlow" id="cursor-glow" aria-hidden="true"></div>
-    <!-- HEADER TESLA: flutuante transparente sobre hero -->
-    <header :class="[isLanding && !isScrolled ? 'bg-transparent border-transparent' : 'bg-slate-950/85 backdrop-blur-md border-slate-800/80 shadow-lg shadow-black/20', 'fixed top-0 inset-x-0 z-40 border-b transition-all duration-300']">
-      <div class="max-w-[1383px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg">
-            <img :src="logoUrl" alt="Casa Obras e Reparos" class="w-10 h-10 rounded-xl object-cover" />
-          </div>
-          <div>
-            <h1 class="font-extrabold text-lg text-white tracking-tight flex items-center gap-2">
-              Casa Obras e Reparos
-            </h1>
-            <p class="text-xs text-slate-400 hidden sm:block">
-              
-            </p>
-          </div>
-        </div>
+    <AppHeader />
 
-        <!-- NAV TESLA (desktop, 5 seções) -->
-        <nav v-if="isLanding || activeTab === 'profissionais'" class="hidden md:flex items-center gap-1">
-          <button v-for="s in teslaSections" :key="s.id" @click="scrollToId(s.id)" :class="['px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300', activeSection === s.id ? 'text-white bg-white/10' : 'text-slate-200/90 hover:text-white hover:bg-white/10']">
-            {{ s.label }}
-          </button>
-          <button @click="openProfessionalsPage" :class="['px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300', activeTab === 'profissionais' ? 'text-white bg-white/10' : 'text-slate-200/90 hover:text-white hover:bg-white/10']">
-            Profissionais
-          </button>
-        </nav>
-
-        <div class="flex items-center gap-2">
-          <!-- AUTH (login/logout) -->
-          <template v-if="authUser">
-            <button
-              @click="goToModule(userProfile?.role === 'pro' ? 'pro' : 'client')"
-              class="hidden sm:flex px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-bold hover:bg-amber-500/25 transition-all items-center gap-1.5"
-              title="Meu Painel"
-            >
-              <LayoutDashboard class="w-3.5 h-3.5" />
-              Meu Painel
-            </button>
-            <button
-              type="button"
-              class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700 cursor-pointer hover:border-amber-500/50 hover:bg-slate-800 transition-all text-left"
-              title="Editar meus dados"
-              @click="handleHeaderProfileClick"
-            >
-              <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-500 to-yellow-400 flex items-center justify-center shrink-0">
-                <User class="w-3.5 h-3.5 text-slate-950" />
-              </div>
-              <span class="text-xs font-bold text-white max-w-[120px] truncate">{{ (userMode === 'pro' ? proProfile.name : userProfile?.name) || authUser.name || authUser.email }}</span>
-            </button>
-            <button
-              @click="handleLogout"
-              class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300 hover:border-red-500/50 hover:text-red-400 transition-all flex items-center gap-1.5"
-              title="Sair"
-            >
-              <LogOut class="w-3.5 h-3.5" />
-              <span class="hidden sm:inline">Sair</span>
-            </button>
-          </template>
-          <button
-            v-else
-            @click="trackEvent('login_start', {}); showAuth = true; authView = 'login'"
-            class="btn-shine px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-xs hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center gap-1.5 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <LogIn class="w-4 h-4" />
-            Entrar
-          </button>
-
-          <button
-            class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-            @click="isMobileMenuOpen = true"
-          >
-            <Menu class="w-5 h-5" />
-          </button>
-        </div>
-        </div>
-    </header>
-
-    <!-- MOBILE NAVIGATION DRAWER -->
-    <div v-if="isMobileMenuOpen" class="fixed inset-0 z-50 md:hidden">
-      <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="isMobileMenuOpen = false"></div>
-      <div class="absolute right-0 top-0 h-full w-72 bg-slate-900 border-l border-slate-800 shadow-2xl p-4 space-y-4 overflow-y-auto">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <span class="font-bold text-white text-sm">Navegação</span>
-          <button @click="isMobileMenuOpen = false" class="text-slate-400 hover:text-white">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="space-y-2">
-          <button
-            v-if="authUser"
-            @click="goToModule(userProfile?.role === 'pro' ? 'pro' : 'client'); isMobileMenuOpen = false"
-            class="w-full px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-amber-500/15 text-amber-300 border border-amber-500/40"
-          >
-            <LayoutDashboard class="w-4 h-4" />
-            Meu Painel
-          </button>
-          <template v-if="isLanding || activeTab === 'profissionais'">
-            <button v-for="s in teslaSections" :key="'m-'+s.id" @click="scrollToId(s.id); isMobileMenuOpen = false" class="w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all flex items-center gap-2 text-slate-200 hover:text-white hover:bg-white/10">
-              {{ s.label }}
-            </button>
-            <button @click="openProfessionalsPage(); isMobileMenuOpen = false" :class="['w-full px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all flex items-center gap-2', activeTab === 'profissionais' ? 'text-white bg-white/10' : 'text-slate-200 hover:text-white hover:bg-white/10']">
-              Profissionais
-            </button>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <!-- AUTH MODAL (LOGIN / REGISTER) -->
-    <div v-if="showAuth" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="showAuth = false"></div>
-      <div class="relative min-h-full flex items-center justify-center p-4">
-        <div class="w-full max-w-lg bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-          <div class="relative bg-slate-950 p-6 border-b border-slate-800 overflow-hidden">
-            <div class="absolute -top-20 -right-16 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
-            <div class="relative flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <img :src="logoUrl" alt="Casa Obras e Reparos" class="w-9 h-9 rounded-xl object-cover" />
-                <h2 class="font-black text-white text-lg tracking-tight">
-                  {{ authView === 'login' ? 'Entrar' : 'Criar Conta' }}
-                  <span class="block text-[11px] font-medium text-slate-400">Casa Obras e Reparos</span>
-                </h2>
-              </div>
-              <button @click="showAuth = false" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-all">
-                <X class="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div class="p-6 space-y-5">
-            <!-- VIEW SWITCH -->
-            <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex">
-              <button
-                @click="authView = 'login'; authError = ''"
-                :class="[
-                  'flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all',
-                  authView === 'login' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'
-                ]"
-              >
-                <LogIn class="w-3.5 h-3.5 inline mr-1" /> Entrar
-              </button>
-              <button
-                @click="authView = 'register'; authError = ''"
-                :class="[
-                  'flex-1 px-4 py-2 rounded-lg text-xs font-bold transition-all',
-                  authView === 'register' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'
-                ]"
-              >
-                <User class="w-3.5 h-3.5 inline mr-1" /> Cadastrar
-              </button>
-            </div>
-
-            <!-- LOGIN FORM -->
-            <form v-if="authView === 'login'" @submit.prevent="handleLogin" class="space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">E-mail *</label>
-                <input
-                  v-model="loginEmail"
-                  type="email"
-                  required
-                  placeholder="seu@email.com"
-                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Senha *</label>
-                <input
-                  v-model="loginPassword"
-                  type="password"
-                  required
-                  placeholder="Sua senha"
-                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                />
-              </div>
-
-              <div v-if="authError" class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-2">
-                <X class="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <p class="text-xs text-red-300">{{ authError }}</p>
-              </div>
-
-              <button
-                type="submit"
-                :disabled="authLoading"
-                class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.99]"
-              >
-                <LogIn class="w-4 h-4" />
-                {{ authLoading ? 'Entrando...' : 'Entrar' }}
-              </button>
-
-              <p class="text-center text-xs text-slate-400">
-                Ainda não tem conta?
-                <button type="button" @click="authView = 'register'; authError = ''" class="text-amber-400 font-bold hover:underline">Cadastre-se</button>
-              </p>
-            </form>
-
-            <!-- REGISTER FORM -->
-            <form v-else @submit.prevent="handleRegister" class="space-y-4">
-              <!-- ROLE TOGGLE -->
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Eu sou...</label>
-                <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1">
-                  <button
-                    type="button"
-                    @click="authRole = 'client'"
-                    :class="[
-                      'flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5',
-                      authRole === 'client' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'
-                    ]"
-                  >
-                    <User class="w-3.5 h-3.5" /> Cliente
-                  </button>
-                  <button
-                    type="button"
-                    @click="authRole = 'pro'"
-                    :class="[
-                      'flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5',
-                      authRole === 'pro' ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20' : 'text-slate-400 hover:text-white'
-                    ]"
-                  >
-                    <Wrench class="w-3.5 h-3.5" /> Profissional
-                  </button>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">Nome completo *</label>
-                  <input
-                    v-model="registerForm.name"
-                    type="text"
-                    required
-                    placeholder="Seu nome"
-                    class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">Data de nascimento</label>
-                  <input
-                    v-model="registerForm.birth_date"
-                    type="date"
-                    class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all [color-scheme:dark]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">E-mail *</label>
-                <input
-                  v-model="registerForm.email"
-                  type="email"
-                  required
-                  placeholder="seu@email.com"
-                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Senha * <span class="text-slate-500 font-normal">(mínimo 6 caracteres)</span></label>
-                <input
-                  v-model="registerForm.password"
-                  type="password"
-                  required
-                  placeholder="Crie uma senha"
-                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                />
-              </div>
-
-              <div v-if="authRole === 'pro'">
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Categoria *</label>
-                <select
-                  v-model="registerForm.category"
-                  required
-                  class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                >
-                  <option value="">Selecione a categoria...</option>
-                  <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option>
-                </select>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">Endereço</label>
-                  <input
-                    v-model="registerForm.address"
-                    type="text"
-                    placeholder="Rua, número"
-                    class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">Bairro</label>
-                  <input
-                    v-model="registerForm.bairro"
-                    type="text"
-                    placeholder="Seu bairro"
-                    class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div class="grid grid-cols-3 gap-4">
-                <div class="col-span-2">
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">Cidade</label>
-                  <input
-                    v-model="registerForm.cidade"
-                    type="text"
-                    placeholder="Sua cidade"
-                    class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1.5">UF</label>
-                  <input
-                    v-model="registerForm.uf"
-                    type="text"
-                    maxlength="2"
-                    placeholder="UF"
-                    class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all uppercase"
-                  />
-                </div>
-              </div>
-
-              <div v-if="authError" class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-2">
-                <X class="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <p class="text-xs text-red-300">{{ authError }}</p>
-              </div>
-
-              <button
-                type="submit"
-                :disabled="authLoading"
-                class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.99]"
-              >
-                <User class="w-4 h-4" />
-                {{ authLoading ? 'Criando conta...' : 'Criar Conta' }}
-              </button>
-
-              <p class="text-center text-xs text-slate-400">
-                Já tem conta?
-                <button type="button" @click="authView = 'login'; authError = ''" class="text-amber-400 font-bold hover:underline">Entrar</button>
-              </p>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+    <AuthModal v-if="showAuth" />
 
     <!-- MAIN CONTENT AREA -->
     <main :class="[isLanding ? 'flex-1 w-full' : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6']">
@@ -1122,40 +690,7 @@ onUnmounted(() => {
 
       <!-- MODE CLIENT: TAB 1 - SOLICITAR COM IA -->
       <div v-if="userMode === 'client' && activeTab === 'solicitar'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- CLIENT SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'solicitar'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <Bot class="w-3.5 h-3.5" />
-            Solicitar com IA
-          </button>
-          <button
-            @click="activeTab = 'meus_pedidos'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50 relative"
-          >
-            <Clock class="w-3.5 h-3.5" />
-            Meus Pedidos
-            <span v-if="requests.length > 0" class="bg-amber-400 text-slate-950 font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
-              {{ requests.length }}
-            </span>
-          </button>
-          <button
-            @click="activeTab = 'recibos_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <FileText class="w-3.5 h-3.5" />
-            Meus Recibos
-          </button>
-          <button
-            @click="activeTab = 'historico_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ClientSubTabs :active="activeTab" />
 
         <!-- SUCCESS BANNER WHEN ORDER CREATED -->
         <div v-if="createdOrderSuccess" class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1724,40 +1259,7 @@ onUnmounted(() => {
 
       <!-- MODE CLIENT: TAB 2 - MEUS PEDIDOS & STATUS -->
       <div v-if="userMode === 'client' && activeTab === 'meus_pedidos'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- CLIENT SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'solicitar'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <Bot class="w-3.5 h-3.5" />
-            Solicitar com IA
-          </button>
-          <button
-            @click="activeTab = 'meus_pedidos'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30 relative"
-          >
-            <Clock class="w-3.5 h-3.5" />
-            Meus Pedidos
-            <span v-if="myRequests.length > 0" class="bg-amber-400 text-slate-950 font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
-              {{ myRequests.length }}
-            </span>
-          </button>
-          <button
-            @click="activeTab = 'recibos_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <FileText class="w-3.5 h-3.5" />
-            Meus Recibos
-          </button>
-          <button
-            @click="activeTab = 'historico_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ClientSubTabs :active="activeTab" />
 
         <div class="flex items-center justify-between">
           <div>
@@ -1943,40 +1445,7 @@ onUnmounted(() => {
 
       <!-- MODE CLIENT: TAB 3 - MEUS RECIBOS DIGITAIS -->
       <div v-if="userMode === 'client' && activeTab === 'recibos_cliente'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- CLIENT SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'solicitar'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <Bot class="w-3.5 h-3.5" />
-            Solicitar com IA
-          </button>
-          <button
-            @click="activeTab = 'meus_pedidos'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50 relative"
-          >
-            <Clock class="w-3.5 h-3.5" />
-            Meus Pedidos
-            <span v-if="requests.length > 0" class="bg-amber-400 text-slate-950 font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center">
-              {{ requests.length }}
-            </span>
-          </button>
-          <button
-            @click="activeTab = 'recibos_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <FileText class="w-3.5 h-3.5" />
-            Meus Recibos
-          </button>
-          <button
-            @click="activeTab = 'historico_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ClientSubTabs :active="activeTab" />
 
         <div>
           <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
@@ -2026,37 +1495,7 @@ onUnmounted(() => {
 
       <!-- MODE CLIENT: HISTÓRICO DE PEDIDOS -->
       <div v-if="userMode === 'client' && activeTab === 'historico_cliente'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- CLIENT SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'solicitar'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <Bot class="w-3.5 h-3.5" />
-            Solicitar com IA
-          </button>
-          <button
-            @click="activeTab = 'meus_pedidos'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50 relative"
-          >
-            <Clock class="w-3.5 h-3.5" />
-            Meus Pedidos
-          </button>
-          <button
-            @click="activeTab = 'recibos_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <FileText class="w-3.5 h-3.5" />
-            Meus Recibos
-          </button>
-          <button
-            @click="activeTab = 'historico_cliente'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ClientSubTabs :active="activeTab" />
 
         <div>
           <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
@@ -2142,37 +1581,7 @@ onUnmounted(() => {
 
       <!-- MODE PRO: TAB 1 - PAINEL DE ATENDIMENTOS -->
       <div v-if="userMode === 'pro' && activeTab === 'pedidos_pro'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- PRO SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'pedidos_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <SlidersHorizontal class="w-3.5 h-3.5" />
-            Painel de Atendimentos
-          </button>
-          <button
-            @click="activeTab = 'faturamento'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <TrendingUp class="w-3.5 h-3.5" />
-            Faturamento
-          </button>
-          <button
-            @click="activeTab = 'perfil_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <Star class="w-3.5 h-3.5" />
-            Meu Perfil
-          </button>
-          <button
-            @click="activeTab = 'historico_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ProSubTabs :active="activeTab" />
 
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -2344,37 +1753,7 @@ onUnmounted(() => {
 
       <!-- MODE PRO: TAB 2 - RELATÓRIO DE FATURAMENTO -->
       <div v-if="userMode === 'pro' && activeTab === 'faturamento'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- PRO SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'pedidos_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <SlidersHorizontal class="w-3.5 h-3.5" />
-            Painel de Atendimentos
-          </button>
-          <button
-            @click="activeTab = 'faturamento'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <TrendingUp class="w-3.5 h-3.5" />
-            Faturamento
-          </button>
-          <button
-            @click="activeTab = 'perfil_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <Star class="w-3.5 h-3.5" />
-            Meu Perfil
-          </button>
-          <button
-            @click="activeTab = 'historico_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ProSubTabs :active="activeTab" />
 
         <!-- GATED: Relatórios avançados apenas no plano Ouro -->
         <template v-if="hasFeature('advancedReports')">
@@ -2461,45 +1840,15 @@ onUnmounted(() => {
 
       <!-- MODE PRO: TAB 3 - PERFIL PROFISSIONAL -->
       <div v-if="userMode === 'pro' && activeTab === 'perfil_pro'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- PRO SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'pedidos_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <SlidersHorizontal class="w-3.5 h-3.5" />
-            Painel de Atendimentos
-          </button>
-          <button
-            @click="activeTab = 'faturamento'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <TrendingUp class="w-3.5 h-3.5" />
-            Faturamento
-          </button>
-          <button
-            @click="activeTab = 'perfil_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <Star class="w-3.5 h-3.5" />
-            Meu Perfil
-          </button>
-          <button
-            @click="activeTab = 'historico_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ProSubTabs :active="activeTab" />
 
         <!-- CADASTRO: Quando não há profissional cadastrado -->
-        <div v-if="!proProfile.id && !isRegistering" class="bg-slate-900 rounded-2xl p-8 border border-slate-800 text-center space-y-4">
+        <div v-if="!proProfile.id" class="bg-slate-900 rounded-2xl p-8 border border-slate-800 text-center space-y-4">
           <Building2 class="w-14 h-14 text-amber-400 mx-auto" />
           <h2 class="text-xl font-bold text-white">Você ainda não é um prestador cadastrado</h2>
           <p class="text-sm text-slate-400 max-w-md mx-auto">Cadastre-se para receber solicitações de serviço dos clientes na sua região.</p>
           <button
-            @click="isRegistering = true; openProfileEditor()"
+            @click="showProfileModal = true"
             class="px-6 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm hover:bg-amber-400 transition-all inline-flex items-center gap-2"
           >
             <Wrench class="w-4 h-4" />
@@ -2508,7 +1857,7 @@ onUnmounted(() => {
         </div>
 
         <!-- CARD DO PERFIL -->
-        <div v-if="proProfile.id && !isEditingProfile" class="bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-6">
+        <div v-if="proProfile.id" class="bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
             <div class="flex items-center gap-4">
               <div class="w-16 h-16 rounded-2xl bg-slate-800 border-2 border-amber-500/50 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
@@ -2577,7 +1926,7 @@ onUnmounted(() => {
         </div>
 
         <!-- PLAN SELECTION SECTION -->
-        <div v-if="proProfile.id && !isEditingProfile" class="space-y-6">
+        <div v-if="proProfile.id" class="space-y-6">
           <!-- Current Plan Badge -->
           <div class="bg-slate-900/80 rounded-2xl p-6 border border-slate-800">
             <div class="flex items-center justify-between">
@@ -2679,127 +2028,11 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <!-- EDIT PROFILE FORM (forboth registration and editing) -->
-        <div v-if="isEditingProfile" class="bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-4">
-          <h3 class="font-bold text-white text-sm">{{ isRegistering ? 'Cadastrar Perfil Profissional' : 'Editar Informações Públicas' }}</h3>
-          <!-- AVATAR UPLOAD -->
-          <div class="flex items-center gap-3">
-            <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-              <img v-if="avatarPreview || proProfile.avatar" :src="avatarPreview || proProfile.avatar" class="w-full h-full object-cover" />
-              <User v-else class="w-6 h-6 text-slate-500" />
-            </div>
-            <label class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 flex items-center gap-1.5">
-              <Camera class="w-3 h-3" />
-              Escolher Foto
-              <input type="file" accept="image/*" class="hidden" @change="handleAvatarUpload" />
-            </label>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="text-slate-400">Nome Profissional:</label>
-              <input
-                type="text"
-                v-model="editProName"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-            <div>
-              <label class="text-slate-400">Categoria:</label>
-              <select
-                v-model="editProCategory"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-              >
-                <option value="" disabled>Selecione uma categoria</option>
-                <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-slate-400">E-mail para Assinatura:</label>
-              <input
-                type="email"
-                v-model="editProEmail"
-                placeholder="voce@email.com"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-            <div>
-              <label class="text-slate-400">WhatsApp de Atendimento:</label>
-              <input
-                type="text"
-                v-model="editProPhone"
-                placeholder="(11) 99999-9999"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-            <div>
-              <label class="text-slate-400">Chave PIX para Recibos:</label>
-              <input
-                type="text"
-                v-model="editProPix"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label class="text-slate-400">Biografia / Experiência:</label>
-            <textarea
-              v-model="editProBio"
-              rows="2"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white mt-1 focus:outline-none focus:border-amber-500 resize-none"
-            />
-          </div>
-          <div class="flex gap-2">
-            <button
-              @click="handleSaveProfile"
-              class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all"
-            >
-              {{ isRegistering ? 'Cadastrar' : 'Salvar Alterações' }}
-            </button>
-            <button
-              v-if="isRegistering"
-              @click="isRegistering = false; isEditingProfile = false"
-              class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-all"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
       </div>
 
       <!-- MODE PRO: HISTÓRICO DE ATENDIMENTOS -->
       <div v-if="userMode === 'pro' && activeTab === 'historico_pro'" class="space-y-6 animate-in fade-in duration-300">
-        <!-- PRO SUB-TABS -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-1 flex items-center gap-1 overflow-x-auto scrollbar-none">
-          <button
-            @click="activeTab = 'pedidos_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <SlidersHorizontal class="w-3.5 h-3.5" />
-            Painel de Atendimentos
-          </button>
-          <button
-            @click="activeTab = 'faturamento'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <TrendingUp class="w-3.5 h-3.5" />
-            Faturamento
-          </button>
-          <button
-            @click="activeTab = 'perfil_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <Star class="w-3.5 h-3.5" />
-            Meu Perfil
-          </button>
-          <button
-            @click="activeTab = 'historico_pro'"
-            class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 bg-slate-800 text-amber-400 border border-amber-500/30"
-          >
-            <History class="w-3.5 h-3.5" />
-            Histórico
-          </button>
-        </div>
+        <ProSubTabs :active="activeTab" />
 
         <div>
           <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
@@ -2868,347 +2101,29 @@ onUnmounted(() => {
       </div>
     </main>
 
-    <!-- UPGRADE MODAL -->
-    <!-- ONBOARDING PLANS (after pro registration) -->
-    <div v-if="showOnboardingPlans" class="fixed inset-0 z-50 overflow-y-auto">
-      <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm"></div>
-      <div class="relative min-h-full flex items-center justify-center p-4 py-8">
-        <div class="w-full max-w-3xl bg-slate-900 rounded-3xl border border-amber-500/30 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-          <div class="relative bg-slate-950 p-6 border-b border-slate-800 text-center overflow-hidden">
-            <div class="absolute -top-16 left-1/2 -translate-x-1/2 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl animate-pulse-slow pointer-events-none" />
-            <div class="relative">
-              <Sparkles class="w-9 h-9 text-amber-400 mx-auto mb-3" />
-              <h3 class="text-xl sm:text-2xl font-black text-white">Bem-vindo(a) à Casa Obras e Reparos!</h3>
-              <p class="text-sm text-slate-300 mt-2 max-w-lg mx-auto">
-                Sua conta de <strong class="text-amber-400">Prestador</strong> foi criada. Escolha um plano para começar a receber chamados da sua região.
-              </p>
-            </div>
-          </div>
+    <UpgradeModal />
+    <OnboardingPlansModal />
 
-          <div class="p-6 space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div
-                v-for="p in displayPlans"
-                :key="p.id"
-                :class="[
-                  'bg-slate-950/60 rounded-2xl p-4 border transition-all flex flex-col',
-                  p.id === 'bronze' ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'border-slate-800'
-                ]"
-              >
-                <div class="flex items-center gap-2 mb-3">
-                  <div class="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <component :is="p.icon" class="w-4.5 h-4.5 text-amber-400" style="width:18px;height:18px" />
-                  </div>
-                  <div>
-                    <h4 class="font-bold text-white text-sm">{{ p.name }}</h4>
-                    <p class="text-amber-400 font-extrabold text-sm">{{ p.price }}<span class="text-[10px] text-slate-400 font-medium">/mês</span></p>
-                  </div>
-                </div>
-                <p class="text-[10px] text-slate-400 mb-2">{{ p.tagline }}</p>
-                <ul class="space-y-1.5 flex-1 mb-3">
-                  <li v-for="feature in p.features" :key="feature" class="flex items-center gap-1.5">
-                    <Check class="w-3 h-3 text-green-400 shrink-0" />
-                    <span class="text-[11px] text-slate-300">{{ feature }}</span>
-                  </li>
-                </ul>
-                <button
-                  v-if="p.id === 'gratuito'"
-                  @click="showOnboardingPlans = false"
-                  class="w-full py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-all"
-                >
-                  Continuar Grátis
-                </button>
-                <button
-                  v-else
-                  @click="subscribePlan(p.id); showOnboardingPlans = false"
-                  class="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 text-xs font-black hover:from-amber-400 hover:to-yellow-300 transition-all shadow-md shadow-amber-500/20"
-                >
-                  {{ p.cta }}
-                </button>
-              </div>
-            </div>
+    <ScheduleModal />
 
-            <div class="flex items-center justify-between pt-2 border-t border-slate-800">
-              <p class="text-xs text-slate-400">Você pode escolher um plano a qualquer momento em "Meu Perfil".</p>
-              <button
-                @click="showOnboardingPlans = false"
-                class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
-              >
-                Pular por enquanto
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <RateModal />
 
-    <div v-if="showUpgradeModal && upgradeRecommendation" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" @click="showUpgradeModal = false"></div>
-      <div class="relative bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl max-w-md w-full space-y-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-xl font-extrabold text-white">Fazer Upgrade</h3>
-          <button @click="showUpgradeModal = false" class="text-slate-400 hover:text-white">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="bg-gradient-to-br from-amber-500/10 to-yellow-400/10 rounded-2xl p-6 border border-amber-500/20">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-              <Sparkles class="w-6 h-6 text-amber-400" />
-            </div>
-            <div>
-              <h4 class="font-bold text-white text-lg">Plano {{ upgradeRecommendation.label }}</h4>
-              <p class="text-amber-400 font-extrabold text-xl">{{ upgradeRecommendation.price }}<span class="text-sm text-slate-400 font-medium">/mês</span></p>
-            </div>
-          </div>
-          <ul class="space-y-2 text-sm text-slate-300">
-            <li v-for="feature in upgradeRecommendation.features" :key="feature" class="flex items-center gap-2">
-              <Check class="w-4 h-4 text-green-400" />
-              {{ feature }}
-            </li>
-          </ul>
-        </div>
-
-        <div class="flex gap-3">
-          <button
-            @click="showUpgradeModal = false"
-            class="flex-1 py-3 px-4 bg-slate-800 text-slate-300 font-medium rounded-xl hover:bg-slate-700 transition-all"
-          >
-            Cancelar
-          </button>
-          <button
-            @click="subscribePlan(upgradeRecommendation.plan); showUpgradeModal = false"
-            class="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold rounded-xl hover:from-amber-400 hover:to-yellow-300 transition-all flex items-center justify-center gap-2"
-          >
-            <Zap class="w-5 h-5" />
-            Assinar Agora
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL 1: SCHEDULE VISIT / SET COST -->
-    <div v-if="scheduleModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="font-bold text-white text-sm flex items-center gap-2">
-            <Calendar class="w-4 h-4 text-amber-400" />
-            Agendar Visita / Definir Preço
-          </h3>
-          <button @click="scheduleModal = null" class="text-slate-400 hover:text-white">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="space-y-3 text-xs">
-          <p class="text-slate-300">
-            Defina o dia, horário e valor acordado para o atendimento de <strong>{{ scheduleModal.client_name }}</strong>.
-          </p>
-
-          <div>
-            <label class="text-slate-400 font-medium">Data da Visita:</label>
-            <input
-              type="date"
-              v-model="scheduleDate"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-
-          <div>
-            <label class="text-slate-400 font-medium">Horário Estimado:</label>
-            <input
-              type="time"
-              v-model="scheduleTime"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-            />
-          </div>
-
-          <div>
-            <label class="text-slate-400 font-medium">Valor do Serviço / Visita (R$):</label>
-            <input
-              type="number"
-              v-model="schedulePrice"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500 font-bold"
-              placeholder="Ex: 220"
-            />
-          </div>
-
-          <div>
-            <label class="text-slate-400 font-medium">Observação para o Cliente:</label>
-            <input
-              type="text"
-              v-model="scheduleObs"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-              placeholder="Ex: Trazer escada alta e disjuntor de fiação"
-            />
-          </div>
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button
-            @click="handleSaveSchedule"
-            class="flex-1 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20"
-          >
-            Confirmar Agendamento
-          </button>
-          <button
-            @click="scheduleModal = null"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL 2: RATE SERVICE -->
-    <div v-if="rateOrderModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-200">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="font-bold text-white text-sm flex items-center gap-2">
-            <Star class="w-4 h-4 text-amber-400 fill-amber-400" />
-            Avaliar Prestador de Serviço
-          </h3>
-          <button @click="rateOrderModal = null" class="text-slate-400 hover:text-white">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <div class="space-y-4 text-xs text-center">
-          <p class="text-slate-300">
-            Como foi o atendimento de <strong>{{ proProfile.name }}</strong> para o serviço de {{ rateOrderModal.category }}?
-          </p>
-
-          <!-- STAR SELECTOR -->
-          <div class="flex items-center justify-center gap-2 py-2">
-            <button
-              v-for="star in 5"
-              :key="star"
-              type="button"
-              @click="ratingStars = star"
-              class="p-1 hover:scale-125 transition-transform"
-            >
-              <Star
-                :class="[
-                  'w-7 h-7',
-                  star <= ratingStars ? 'fill-amber-400 text-amber-400' : 'text-slate-700 hover:text-amber-400'
-                ]"
-              />
-            </button>
-          </div>
-
-          <div>
-            <textarea
-              v-model="ratingComment"
-              rows="3"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
-              placeholder="Escreva um breve comentário sobre a qualidade e pontualidade..."
-            />
-          </div>
-        </div>
-
-        <div class="flex gap-2">
-          <button
-            @click="handleSaveRating"
-            class="flex-1 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all"
-          >
-            Enviar Avaliação
-          </button>
-          <button
-            @click="rateOrderModal = null"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL 3: VIEW & PRINT DIGITAL RECEIPT -->
-    <div v-if="viewReceiptModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 class="font-bold text-white text-sm flex items-center gap-2">
-            <FileText class="w-4 h-4 text-amber-400" />
-            Recibo Digital de Prestação de Serviço
-          </h3>
-          <button @click="viewReceiptModal = null" class="text-slate-400 hover:text-white">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- PRINTABLE RECEIPT CONTAINER -->
-        <div class="bg-white text-slate-900 p-6 rounded-xl space-y-5 font-mono text-xs shadow-inner">
-          <div class="border-b-2 border-slate-900 pb-3 flex justify-between items-start">
-            <div>
-              <h4 class="font-extrabold text-sm uppercase tracking-tight">Recibo de Serviço</h4>
-              <p class="text-[10px] text-slate-600">Nº Ord: {{ viewReceiptModal.id }}</p>
-            </div>
-            <div class="text-right text-[10px] text-slate-600">
-              <p>Data: {{ viewReceiptModal.agendamento?.data || '2026-07-29' }}</p>
-              <p>Status: QUITADO</p>
-            </div>
-          </div>
-
-          <div class="space-y-2 text-[11px]">
-            <p><strong>PRESTADOR:</strong> {{ proProfile.name }}</p>
-            <p><strong>CATEGORIA:</strong> {{ proProfile.category }}</p>
-            <p><strong>CHAVE PIX:</strong> {{ proProfile.pix_key }}</p>
-          </div>
-
-          <div class="border-t border-b border-slate-200 py-3 space-y-2 text-[11px]">
-            <p><strong>CLIENTE:</strong> {{ viewReceiptModal.client_name }}</p>
-            <p><strong>ENDEREÇO:</strong> {{ viewReceiptModal.client_address }}</p>
-            <p><strong>SERVIÇO EXECUTADO:</strong> {{ viewReceiptModal.ai_analysis?.summary || viewReceiptModal.category }}</p>
-          </div>
-
-          <div class="flex justify-between items-center text-sm font-extrabold pt-2">
-            <span>VALOR TOTAL PAGO:</span>
-            <span class="text-amber-700">R$ {{ viewReceiptModal.final_price }},00</span>
-          </div>
-
-          <div class="text-center pt-4 text-[9px] text-slate-500 border-t border-dashed border-slate-300">
-            Comprovante gerado digitalmente via Casa Obras e Reparos IA.
-          </div>
-        </div>
-
-        <!-- MODAL ACTIONS -->
-        <div class="flex gap-2">
-          <button
-            @click="printReceipt"
-            class="flex-1 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
-          >
-            <Printer class="w-4 h-4" /> Imprimir ou Salvar PDF
-          </button>
-          <button
-            @click="viewReceiptModal = null"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
-          >
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
+    <ReceiptModal />
 
     <!-- MODAL DE EDIÇÃO DE PERFIL / CONTA -->
     <ProfileEditModal
       :open="showProfileModal"
       :role="userMode === 'pro' ? 'pro' : 'client'"
-      :professional="proProfile"
+      :professional="proProfile.id ? proProfile : null"
+      :auth-id="authUser?.id ?? null"
       :user="userProfile"
       :categories="CATEGORIES.map(c => c.name)"
       @close="showProfileModal = false"
       @saved="handleProfileModalSaved"
     />
 
-    <!-- FOOTER -->
-    <footer class="border-t border-slate-800/80 bg-slate-950 py-4 text-center text-xs text-slate-500">
-      <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <span>Casa Obras e Reparos © 2026 — Plataforma Inteligente para Prestadores de Serviços Gerais</span>
-        <span class="text-[11px] text-slate-600">Alimentado por Gemini AI Vision API</span>
-      </div>
-    </footer>
+    <AppFooter />
+    <ToastHost />
   </div>
 </template>
 

@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { X, Camera, User, Loader2, AlertCircle, MapPin } from 'lucide-vue-next'
 import type { Professional, User as UserProfile } from '../types'
-import { uploadProfessionalAvatar, updateProfessional, updateUserRecord } from '../api/insforgeService'
+import { uploadProfessionalAvatar, updateProfessional, updateUserRecord, createProfessional } from '../api/insforgeService'
 
 const props = defineProps<{
   open: boolean
@@ -10,6 +10,7 @@ const props = defineProps<{
   professional: Professional | null
   user: UserProfile | null
   categories: string[]
+  authId: string | null
 }>()
 
 const emit = defineEmits<{
@@ -39,7 +40,11 @@ const bairro = ref('')
 const cidade = ref('')
 const uf = ref('')
 
-const title = computed(() => (props.role === 'pro' ? 'Editar Perfil Profissional' : 'Editar Meus Dados'))
+const title = computed(() =>
+  props.role === 'pro' && !props.professional
+    ? 'Cadastrar Perfil Profissional'
+    : (props.role === 'pro' ? 'Editar Perfil Profissional' : 'Editar Meus Dados'),
+)
 const currentAvatar = computed(() => avatarPreview.value || props.professional?.avatar || '')
 
 watch(
@@ -112,7 +117,53 @@ async function handleSave() {
 
   if (props.role === 'pro') {
     const professional = props.professional
-    if (!professional) return
+    if (!professional) {
+      // Modo cadastro: cria a linha do profissional vinculada ao login atual
+      if (!props.authId) {
+        fail('Faça login novamente para cadastrar o perfil.')
+        return
+      }
+      const createDigits = phone.value.replace(/\D/g, '')
+      if (createDigits.length < 10 || createDigits.length > 11) {
+        fail('Informe um telefone válido com DDD (10 ou 11 dígitos).')
+        return
+      }
+      saving.value = true
+      try {
+        const ownerId = props.authId
+        const avatarUrl = avatarFile.value ? await uploadProfessionalAvatar(avatarFile.value, ownerId) : ''
+        const created = await createProfessional({
+          name: trimmedName,
+          category: category.value,
+          email: email.value.trim(),
+          phone: phone.value,
+          pix_key: pixKey.value,
+          bio: bio.value,
+          coverage_bairros: [...coverageBairros.value],
+          cidade: proCidade.value.trim(),
+          uf: proUf.value.trim().toUpperCase(),
+          avatar: avatarUrl,
+          auth_id: ownerId,
+          rating: 0,
+          reviews_count: 0,
+          plan: 'gratuito',
+          plan_status: 'active',
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          plan_expires_at: null,
+          requests_this_month: 0,
+          requests_reset_at: null,
+        })
+        emit('saved', created)
+        emit('close')
+      } catch (err) {
+        console.error('Erro ao criar perfil profissional:', err)
+        fail('Não foi possível salvar as alterações. Tente novamente.')
+      } finally {
+        saving.value = false
+      }
+      return
+    }
     const digits = phone.value.replace(/\D/g, '')
     if (digits.length < 10 || digits.length > 11) {
       fail('Informe um telefone válido com DDD (10 ou 11 dígitos).')
