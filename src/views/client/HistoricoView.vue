@@ -1,18 +1,29 @@
 <script setup lang="ts">
 import { formatRequestDate } from '../../lib/requestStatus'
+import { buildWhatsAppLink } from '../../lib/whatsapp'
+import type { ServiceRequest } from '../../types'
 import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { useProfessionals } from '../../composables/useProfessionals'
+import { usePlans } from '../../composables/usePlans'
+import { useQuoteForm } from '../../composables/useQuoteForm'
 import { useUi } from '../../composables/useUi'
 import ClientSubTabs from '../../components/layout/ClientSubTabs.vue'
-import { History, Printer, Star } from 'lucide-vue-next'
+import { History, MessageSquare, Printer, RotateCcw, Star } from 'lucide-vue-next'
 
 const { userMode } = useAuth()
 const { activeTab, goToTab } = useNavigation()
 const { historicClientRequests } = useRequests()
 const { findProfessional } = useProfessionals()
+const { hasFeature } = usePlans()
+const { handleChooseProfessional } = useQuoteForm()
 const { viewReceiptModal, rateOrderModal } = useUi()
+
+function handleRehire(req: ServiceRequest): void {
+  const pro = findProfessional(req.professional_id)
+  if (pro) handleChooseProfessional(pro)
+}
 </script>
 
 <template>
@@ -97,6 +108,22 @@ const { viewReceiptModal, rateOrderModal } = useUi()
               >
                 <Star class="w-3.5 h-3.5" /> Avaliar serviço
               </button>
+              <button
+                v-if="findProfessional(req.professional_id)"
+                @click="handleRehire(req)"
+                class="flex-1 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all flex items-center justify-center gap-2"
+              >
+                <RotateCcw class="w-3.5 h-3.5" /> Solicitar novamente
+              </button>
+              <a
+                v-if="findProfessional(req.professional_id) && hasFeature('whatsappVisible')"
+                :href="buildWhatsAppLink(findProfessional(req.professional_id)?.phone || '', `Olá ${findProfessional(req.professional_id)?.name ?? 'profissional'}! Você já realizou um serviço para mim pela plataforma e gostaria de solicitar outro serviço de ${req.category}.`)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex-1 py-2 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <MessageSquare class="w-3.5 h-3.5" /> WhatsApp
+              </a>
             </div>
           </div>
         </div>
