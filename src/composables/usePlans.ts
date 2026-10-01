@@ -124,7 +124,7 @@ const upgradeRecommendation = computed(() => {
 })
 
 async function subscribePlan(targetPlan: string) {
-  const { proProfile } = useAuth()
+  const { proProfile, loadProfessionalProfile } = useAuth()
   const { loadData } = useRequests()
   const { goToTab } = useNavigation()
   try {
@@ -137,6 +137,12 @@ async function subscribePlan(targetPlan: string) {
     if (hasActiveSubscription) {
       await changePlan(proProfile.value.id, targetPlan)
       await loadData()
+      if (proProfile.value.auth_id) await loadProfessionalProfile(proProfile.value.auth_id)
+      else if (targetPlan === 'gratuito' || targetPlan === 'bronze' || targetPlan === 'prata' || targetPlan === 'ouro') {
+        proProfile.value.plan = targetPlan
+      }
+      const label = displayPlans.value.find((p) => p.id === targetPlan)?.name ?? targetPlan
+      pushToast('success', `Plano alterado para ${label}.`)
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(proProfile.value.email)) {

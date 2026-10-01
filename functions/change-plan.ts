@@ -96,9 +96,43 @@ export default async function (req: Request): Promise<Response> {
     })
   }
 
+  // Lê os itens atuais para TROCAR o preço (semântica de substituição).
+  // Sem o `id` do item existente, o Stripe ADICIONA um segundo item (cobrança
+  // dupla) ou recusa quando o preço-alvo já está na assinatura.
+  let currentItems: Array<{ id: string; priceId: string }>
+  let currentStatus = 'active'
   try {
+    const current = await stripe.subscriptions.retrieve(proData.stripe_subscription_id)
+    currentStatus = current.status
+    currentItems = (current.items?.data ?? []).map((item) => ({ id: item.id, priceId: item.price.id }))
+  } catch (error) {
+    console.error('Erro ao ler assinatura atual:', error)
+    return new Response(JSON.stringify({ error: 'Subscription not found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Idempotente: preço-alvo já é o único item → só garante o banco sincronizado.
+  if (currentItems.length === 1 && currentItems[0].priceId === planData.stripe_price_id) {
+    await client.database
+      .from('professionals')
+      .update({ plan: targetPlan })
+      .eq('id', professionalId)
+    return new Response(JSON.stringify({ subscriptionId: proData.stripe_subscription_id, status: currentStatus }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  try {
+    const [keep, ...extras] = currentItems
+    const items: Array<{ id?: string; deleted?: boolean; price?: string }> = keep
+      ? [{ id: keep.id, price: planData.stripe_price_id }]
+      : [{ price: planData.stripe_price_id }]
+    for (const extra of extras) items.push({ id: extra.id, deleted: true })
     const subscription = await stripe.subscriptions.update(proData.stripe_subscription_id, {
-      items: [{ price: planData.stripe_price_id }],
+      items,
       proration_behavior: 'create_prorations',
     })
     await client.database
