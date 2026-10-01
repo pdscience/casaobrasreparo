@@ -56,7 +56,7 @@ onUnmounted(() => {
     <AuthModal v-if="showAuth" />
 
     <!-- MAIN CONTENT AREA -->
-    <main :class="[isLanding ? 'flex-1 w-full' : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6']">
+    <main :class="[isLanding ? 'flex-1 w-full' : 'flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-20']">
       <router-view />
     </main>
 
