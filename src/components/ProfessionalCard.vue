@@ -52,11 +52,11 @@ const cityLine = computed(() => {
         <div class="flex items-start justify-between gap-2">
           <p class="font-bold text-white text-sm leading-tight truncate">{{ professional.name }}</p>
           <span
-            v-if="planInfo?.badge_label"
-            :class="[planInfo.badge_bg, planInfo.badge_text, planInfo.badge_border]"
+            v-if="professional.plan"
+            :class="[planInfo?.badge_bg, planInfo?.badge_text, planInfo?.badge_border]"
             class="text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0"
           >
-            {{ planInfo.badge_label }}
+            {{ professional.plan }}
           </span>
         </div>
         <p class="text-xs text-amber-400 font-semibold mt-0.5 truncate">{{ professional.category }}</p>
