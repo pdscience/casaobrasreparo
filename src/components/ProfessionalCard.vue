@@ -123,8 +123,9 @@ const { authUser } = useAuth()
 
     <!-- AÇÕES -->
     <div class="flex items-center gap-2 p-4 pt-0 border-t border-slate-800 mt-auto">
+      <!-- WhatsApp desativado temporariamente: remover o `false &&` para reativar -->
       <a
-        v-if="authUser && planInfo?.show_whatsapp_to_client && professional.phone"
+        v-if="false && authUser && planInfo?.show_whatsapp_to_client && professional.phone"
         :href="buildWhatsAppLink(professional.phone, 'Olá! Gostaria de um orçamento.')"
         target="_blank"
         rel="noopener noreferrer"
