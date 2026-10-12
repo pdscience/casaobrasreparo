@@ -24,6 +24,12 @@ const cityLine = computed(() => {
   return city || uf || ''
 })
 
+const primaryCategory = computed(() => props.professional.categories?.[0] || props.professional.category)
+const extraCategories = computed(() => {
+  const n = props.professional.categories?.length || (props.professional.category ? 1 : 0)
+  return Math.max(0, n - 1)
+})
+
 const { authUser } = useAuth()
 
 </script>
@@ -65,7 +71,7 @@ const { authUser } = useAuth()
         <div class="mt-3 flex items-center gap-2 min-w-0">
           <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
             <Wrench class="w-3 h-3 shrink-0" />
-            <span class="truncate">{{ professional.category }}</span>
+            <span class="truncate">{{ extraCategories > 0 ? `${primaryCategory} +${extraCategories}` : primaryCategory }}</span>
           </p>
           <p v-if="cityLine" class="flex items-center gap-1 text-[13px] text-slate-100 truncate min-w-0">
             <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
@@ -103,6 +109,15 @@ const { authUser } = useAuth()
           </div>
           <p v-else class="text-[11px] text-slate-400 mt-0.5">Atende toda a região</p>
         </div>
+      </div>
+      <div v-if="professional.portfolio_photos?.length" class="flex gap-2 mt-2">
+        <img
+          v-for="(url, i) in professional.portfolio_photos.slice(0, 3)"
+          :key="i"
+          :src="url"
+          alt="Foto do trabalho"
+          class="w-16 h-16 rounded-xl object-cover border border-slate-800"
+        />
       </div>
     </div>
 
