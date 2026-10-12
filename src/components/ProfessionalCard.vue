@@ -59,7 +59,7 @@ const cityLine = computed(() => {
             {{ professional.plan }}
           </span>
         </div>
-        <div class="mt-1 flex items-center gap-2 min-w-0">
+        <div class="mt-2.5 flex items-center gap-2 min-w-0">
           <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
             <Wrench class="w-3 h-3 shrink-0" />
             <span class="truncate">{{ professional.category }}</span>
