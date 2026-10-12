@@ -144,9 +144,12 @@ function handlePortfolioSelect(e: Event) {
       fail(`Seu plano permite até ${maxPhotos.value} foto(s) no portfólio.`)
       break
     }
-    photoFiles.value.push(file)
+    const idx = photoFiles.value.push(file) - 1
+    photoPreviews.value[idx] = ''
     const reader = new FileReader()
-    reader.onloadend = () => { photoPreviews.value.push(reader.result as string) }
+    reader.onloadend = () => {
+      if (photoFiles.value[idx] === file) photoPreviews.value[idx] = reader.result as string
+    }
     reader.readAsDataURL(file)
   }
   ;(e.target as HTMLInputElement).value = ''
@@ -196,7 +199,7 @@ async function handleSave() {
         const avatarUrl = avatarFile.value ? await uploadProfessionalAvatar(avatarFile.value, ownerId) : ''
         const created = await createProfessional({
           name: trimmedName,
-          category: selectedCategories.value[0] ?? category.value,
+          category: selectedCategories.value[0] ?? '',
           categories: [...selectedCategories.value],
           portfolio_photos: [],
           email: email.value.trim(),
@@ -237,6 +240,10 @@ async function handleSave() {
       fail('Número de categorias acima do limite do seu plano.')
       return
     }
+    if (maxPhotos.value > 0 && portfolioPhotos.value.length + photoFiles.value.length > maxPhotos.value) {
+      fail('Remova fotos excedentes para adequar ao plano.')
+      return
+    }
 
     saving.value = true
     try {
@@ -254,7 +261,7 @@ async function handleSave() {
       const finalPhotos = [...portfolioPhotos.value, ...uploaded]
       const updated = await updateProfessional(professional.id, {
         name: trimmedName,
-        category: selectedCategories.value[0] ?? category.value,
+        category: selectedCategories.value[0] ?? '',
         categories: [...selectedCategories.value],
         portfolio_photos: finalPhotos,
         email: email.value.trim(),
@@ -482,10 +489,12 @@ async function handleSave() {
                   <img :src="url" alt="Foto do portfólio" class="w-16 h-16 rounded-xl object-cover border border-slate-700" />
                   <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover foto ${idx + 1}`" @click="removeSavedPhoto(idx)">×</button>
                 </div>
-                <div v-for="(url, idx) in photoPreviews" :key="'staged-' + idx" class="relative w-16 h-16">
-                  <img :src="url" alt="Prévia da foto" class="w-16 h-16 rounded-xl object-cover border border-amber-500/40" />
-                  <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover prévia ${idx + 1}`" @click="removeStagedPhoto(idx)">×</button>
-                </div>
+                <template v-for="(url, idx) in photoPreviews" :key="'staged-' + idx">
+                  <div v-if="url" class="relative w-16 h-16">
+                    <img :src="url" alt="Prévia da foto" class="w-16 h-16 rounded-xl object-cover border border-amber-500/40" />
+                    <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover prévia ${idx + 1}`" @click="removeStagedPhoto(idx)">×</button>
+                  </div>
+                </template>
               </div>
               <label class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition-all inline-flex items-center gap-1.5">
                 <Camera class="w-3.5 h-3.5" />

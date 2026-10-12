@@ -11,7 +11,7 @@ export interface DirectoryFilters {
 }
 
 export function categoriesOf(p: { category: string; categories?: string[] }): string[] {
-  const list = [...(p.categories ?? []), p.category].map((c) => c.trim()).filter(Boolean)
+  const list = [...(p.categories ?? []), p.category].map((c) => (c || '').trim()).filter(Boolean)
   return [...new Set(list)]
 }
 
