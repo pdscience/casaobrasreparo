@@ -59,14 +59,16 @@ const cityLine = computed(() => {
             {{ professional.plan }}
           </span>
         </div>
-        <p class="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate max-w-full">
-          <Wrench class="w-3 h-3 shrink-0" />
-          <span class="truncate">{{ professional.category }}</span>
-        </p>
-        <p v-if="cityLine" class="flex items-center gap-1 text-[12px] text-slate-400 mt-0.5 truncate">
-          <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
-          {{ cityLine }}
-        </p>
+        <div class="mt-1 flex items-center gap-2 min-w-0">
+          <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
+            <Wrench class="w-3 h-3 shrink-0" />
+            <span class="truncate">{{ professional.category }}</span>
+          </p>
+          <p v-if="cityLine" class="flex items-center gap-1 text-[12px] text-slate-400 truncate min-w-0">
+            <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
+            <span class="truncate">{{ cityLine }}</span>
+          </p>
+        </div>
         <span class="inline-flex items-center gap-1.5 mt-1.5 bg-slate-950/70 border border-slate-800 rounded-full px-2 py-0.5">
           <Star class="w-3 h-3 fill-amber-400 text-amber-400" />
           <span class="text-[12px] font-bold text-slate-200">{{ professional.rating ?? 0 }}</span>
