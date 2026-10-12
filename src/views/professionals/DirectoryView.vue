@@ -51,22 +51,18 @@ function handleLandingCategory(categoryName: string) {
       </div>
       <button @click="scrollToId('inicio')" class="text-xs font-bold text-slate-300 hover:text-white border border-slate-700 rounded-full px-4 py-2 whitespace-nowrap">Voltar ao início</button>
     </div>
-    <div class="flex flex-wrap gap-2">
-      <button
-        v-for="cat in ['Todas', ...CATEGORIES.map(c => c.name)]"
-        :key="'pub-'+cat"
-        @click="handleLandingCategory(cat)"
-        :class="['px-4 py-1.5 rounded-full text-[11px] font-bold border transition-all', filterCategory === cat ? 'bg-amber-500 text-slate-950 border-amber-500' : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-500/50']"
-      >
-        {{ cat }}
-      </button>
-    </div>
-    <div v-if="filterCategory !== 'Todas'" class="flex justify-end">
-      <button @click="handleLandingCategory('Todas')" class="text-xs font-bold text-slate-300 hover:text-white border border-slate-700 rounded-full px-4 py-1.5">Limpar filtro</button>
-    </div>
-
-    <!-- FILTROS DE LOCALIZAÇÃO (UF / CIDADE / BAIRRO) -->
+    <!-- FILTROS (PROFISSÃO / UF / CIDADE / BAIRRO) -->
     <div class="flex flex-wrap items-center gap-2">
+      <select
+        :value="filterCategory"
+        aria-label="Filtrar por profissão"
+        class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
+        @change="handleLandingCategory(($event.target as HTMLSelectElement).value)"
+      >
+        <option v-for="cat in ['Todas', ...CATEGORIES.map(c => c.name)]" :key="'pub-cat-' + cat" :value="cat">
+          {{ cat === 'Todas' ? 'Todas as profissões' : cat }}
+        </option>
+      </select>
       <select
         v-model="filterUf"
         aria-label="Filtrar por UF"
@@ -95,7 +91,7 @@ function handleLandingCategory(categoryName: string) {
         </option>
       </select>
       <button
-        v-if="filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
+        v-if="filterCategory !== 'Todas' || filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
         type="button"
         @click="resetDirectoryFilters"
         class="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
