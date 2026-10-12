@@ -126,6 +126,31 @@ export async function uploadProfessionalAvatar(file: File, ownerId: string): Pro
   throw lastErr instanceof Error ? lastErr : new Error('Upload failed')
 }
 
+// Envia foto do portfólio para o bucket service-photos (chave em portfolio/).
+export async function uploadPortfolioPhoto(file: File, ownerId: string): Promise<string> {
+  const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '_').slice(-60) || 'foto'
+  const key = `portfolio/${ownerId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`
+  const delays = [500, 1200, 2500]
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const { data, error } = await insforge.storage
+        .from('service-photos')
+        .upload(key, file)
+      if (!error && data?.url) return data.url
+      lastErr = error
+      if (!isTransientUploadError(error) || attempt === delays.length) {
+        throw error ?? new Error('Upload failed')
+      }
+    } catch (err) {
+      lastErr = err
+      if (!isTransientUploadError(err) || attempt === delays.length) throw err
+    }
+    await new Promise((r) => setTimeout(r, delays[attempt]))
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('Upload failed')
+}
+
 function isTransientUploadError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err)
   return /Slow Down|503|500|502|504|network|timeout|fetch failed/i.test(msg)
