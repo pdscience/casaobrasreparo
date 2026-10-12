@@ -23,6 +23,9 @@ import {
   Hammer,
   Droplets,
   Monitor,
+  HeartHandshake,
+  Stethoscope,
+  Activity,
 } from 'lucide-vue-next'
 
 export const CATEGORIES = [
@@ -50,6 +53,9 @@ export const CATEGORIES = [
   { name: 'Limpeza Pós-Obra', icon: Paintbrush, gradient: 'from-pink-500 to-rose-400', accent: 'text-pink-300', img: 'https://images.pexels.com/photos/3616735/pexels-photo-3616735.jpeg?auto=compress&cs=tinysrgb&w=400' },
   { name: 'Marido de Aluguel', icon: Hammer, gradient: 'from-yellow-600 to-lime-500', accent: 'text-yellow-300', img: 'https://images.pexels.com/photos/17063686/pexels-photo-17063686.jpeg?auto=compress&cs=tinysrgb&w=400' },
   { name: 'Informática', icon: Monitor, gradient: 'from-violet-600 to-indigo-500', accent: 'text-violet-300', img: 'https://images.pexels.com/photos/10558599/pexels-photo-10558599.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Cuidador de Idosos', icon: HeartHandshake, gradient: 'from-rose-600 to-red-400', accent: 'text-rose-300', img: 'https://images.pexels.com/photos/29372724/pexels-photo-29372724.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Acompanhante Hospitalar', icon: Stethoscope, gradient: 'from-emerald-600 to-teal-500', accent: 'text-emerald-300', img: 'https://images.pexels.com/photos/18459245/pexels-photo-18459245.jpeg?auto=compress&cs=tinysrgb&w=400' },
+  { name: 'Fisioterapia Domiciliar', icon: Activity, gradient: 'from-sky-600 to-indigo-500', accent: 'text-sky-300', img: 'https://images.pexels.com/photos/6975756/pexels-photo-6975756.jpeg?auto=compress&cs=tinysrgb&w=400' },
 ]
 
 export const CATEGORY_UNLISTED = 'Serviço que não está na lista'
