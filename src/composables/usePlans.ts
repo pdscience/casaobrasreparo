@@ -67,9 +67,9 @@ function hasFeature(feature: 'whatsappVisible' | 'advancedReports' | 'verifiedBa
 
 const PLANS = [
   { id: 'gratuito', name: 'Gratuito', price: 'R$0', icon: User, tagline: 'Apenas cadastro do perfil', features: ['Cadastro profissional gratuito', 'Perfil público básico'], cta: 'Começar Grátis' },
-  { id: 'bronze', name: 'Bronze', price: 'R$34,90', icon: ShieldCheck, tagline: 'Para começar a atender', features: ['10 pedidos por mês', 'Até 5 fotos', '1 categoria de serviço'], cta: 'Assinar Bronze' },
-  { id: 'prata', name: 'Prata', price: 'R$54,90', icon: Zap, tagline: 'Para crescer com visibilidade', features: ['30 pedidos por mês', 'Perfil completo', 'WhatsApp no perfil', 'Avaliações', 'Prioridade nas buscas'], cta: 'Assinar Prata' },
-  { id: 'ouro', name: 'Ouro', price: 'R$79,90', icon: Sparkles, tagline: 'O máximo para dominar a região', features: ['Pedidos ilimitados', 'Destaque nas pesquisas', 'Selo verificado', 'Estatísticas avançadas', 'Múltiplas categorias', 'Anúncios patrocinados'], cta: 'Assinar Ouro' },
+  { id: 'bronze', name: 'Bronze', price: 'R$34,90', icon: ShieldCheck, tagline: 'Para começar a atender', features: ['10 pedidos por mês', 'Até 1 foto', '1 categoria de serviço'], cta: 'Assinar Bronze' },
+  { id: 'prata', name: 'Prata', price: 'R$54,90', icon: Zap, tagline: 'Para crescer com visibilidade', features: ['30 pedidos por mês', 'Até 3 fotos', 'Até 3 categorias', 'Perfil completo', 'WhatsApp no perfil', 'Prioridade nas buscas'], cta: 'Assinar Prata' },
+  { id: 'ouro', name: 'Ouro', price: 'R$79,90', icon: Sparkles, tagline: 'O máximo para dominar a região', features: ['Pedidos ilimitados', 'Até 5 fotos', 'Categorias ilimitadas', 'Destaque nas pesquisas', 'Selo verificado', 'Estatísticas avançadas'], cta: 'Assinar Ouro' },
 ]
 
 const PLAN_LABELS: Record<string, string> = {
