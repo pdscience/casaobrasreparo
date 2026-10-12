@@ -5,7 +5,7 @@ import type { Professional, User as UserProfile } from '../types'
 import { uploadProfessionalAvatar, updateProfessional, updateUserRecord, createProfessional, uploadPortfolioPhoto } from '../api/insforgeService'
 import { useNavigation } from '../composables/useNavigation'
 import { usePlans } from '../composables/usePlans'
-import { canAddPhoto, canAddCategory } from '../lib/planLimits'
+import { canAddPhoto, canAddCategory, isOverCategoryLimit } from '../lib/planLimits'
 
 const props = defineProps<{
   open: boolean
@@ -186,7 +186,7 @@ async function handleSave() {
         fail('Informe um telefone válido com DDD (10 ou 11 dígitos).')
         return
       }
-      if (!canAddCategory(selectedCategories.value, maxCategories.value)) {
+      if (isOverCategoryLimit(selectedCategories.value, maxCategories.value)) {
         fail('Número de categorias acima do limite do seu plano.')
         return
       }
@@ -233,7 +233,7 @@ async function handleSave() {
       fail('Informe um telefone válido com DDD (10 ou 11 dígitos).')
       return
     }
-    if (!canAddCategory(selectedCategories.value, maxCategories.value)) {
+    if (isOverCategoryLimit(selectedCategories.value, maxCategories.value)) {
       fail('Número de categorias acima do limite do seu plano.')
       return
     }
