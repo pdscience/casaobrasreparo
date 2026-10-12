@@ -72,18 +72,14 @@ const cityLine = computed(() => {
       </div>
     </div>
 
-    <!-- DESCRIÇÃO / EXPERIÊNCIA -->
-    <div class="px-4 pb-3">
+    <!-- DESCRIÇÃO / EXPERIÊNCIA + BAIRROS -->
+    <div class="px-4 pb-3 flex-1 space-y-2">
       <div class="flex items-start gap-2">
         <FileText class="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
         <p class="text-[11px] text-slate-300 leading-relaxed line-clamp-3">
           {{ professional.bio?.trim() || 'Profissional sem descrição ainda.' }}
         </p>
       </div>
-    </div>
-
-    <!-- BAIRROS DE COBERTURA -->
-    <div class="px-4 pb-3 flex-1">
       <div class="flex items-start gap-2 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
         <MapPin class="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
         <div class="min-w-0">
