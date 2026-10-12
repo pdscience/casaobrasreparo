@@ -6,6 +6,7 @@ import { useAuth } from './useAuth'
 import { useNavigation } from './useNavigation'
 import { useRequests } from './useRequests'
 import { pushToast } from './useUi'
+import { maxPhotosForPlan, maxCategoriesForPlan } from '../lib/planLimits'
 
 const plans = ref<Plan[]>([])
 
@@ -31,6 +32,8 @@ const planFeatures = computed(() => {
   const maxRequests = row ? (row.request_limit === null ? Infinity : row.request_limit) : 0
   return {
     maxRequests,
+    maxPhotos: maxPhotosForPlan(row?.max_photos),
+    maxCategories: maxCategoriesForPlan(row?.max_categories),
     prioritySearch: plan === 'ouro' || plan === 'prata',
     verifiedBadge: plan === 'ouro',
     advancedReports: plan === 'ouro',
