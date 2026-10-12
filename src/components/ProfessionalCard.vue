@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Professional, Plan } from '../types'
 import { Star, MessageCircle, X, MapPin, FileText, User, Wrench } from 'lucide-vue-next'
 import { buildWhatsAppLink } from '../lib/whatsapp'
+import { useAuth } from '../composables/useAuth'
 
 const props = defineProps<{
   professional: Professional
@@ -22,6 +23,8 @@ const cityLine = computed(() => {
   if (city && uf) return `${city} - ${uf}`
   return city || uf || ''
 })
+
+const { authUser } = useAuth()
 
 </script>
 
@@ -59,12 +62,12 @@ const cityLine = computed(() => {
             {{ professional.plan }}
           </span>
         </div>
-        <div class="mt-2.5 flex items-center gap-2 min-w-0">
-          <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
+        <div class="mt-3 flex items-center gap-2 min-w-0">
+          <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
             <Wrench class="w-3 h-3 shrink-0" />
             <span class="truncate">{{ professional.category }}</span>
           </p>
-          <p v-if="cityLine" class="flex items-center gap-1 text-[12px] text-slate-400 truncate min-w-0">
+          <p v-if="cityLine" class="flex items-center gap-1 text-[13px] text-slate-100 truncate min-w-0">
             <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
             <span class="truncate">{{ cityLine }}</span>
           </p>
@@ -81,7 +84,7 @@ const cityLine = computed(() => {
     <div class="px-4 pb-3 flex-1 space-y-2">
       <div class="flex items-start gap-2">
         <FileText class="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-        <p class="text-[12px] text-slate-300 leading-relaxed line-clamp-3">
+        <p class="text-[13px] text-slate-100 leading-relaxed line-clamp-3">
           {{ professional.bio?.trim() || 'Profissional sem descrição ainda.' }}
         </p>
       </div>
@@ -106,7 +109,7 @@ const cityLine = computed(() => {
     <!-- AÇÕES -->
     <div class="flex items-center gap-2 p-4 pt-0 border-t border-slate-800 mt-auto">
       <a
-        v-if="planInfo?.show_whatsapp_to_client && professional.phone"
+        v-if="authUser && planInfo?.show_whatsapp_to_client && professional.phone"
         :href="buildWhatsAppLink(professional.phone, 'Olá! Gostaria de um orçamento.')"
         target="_blank"
         rel="noopener noreferrer"
