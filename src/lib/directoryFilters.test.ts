@@ -38,6 +38,19 @@ describe('filterProfessionals', () => {
     const r = filterProfessionals(list, { category: 'Todas', plan: 'ouro', uf: 'Todas', cidade: 'Todas', bairro: 'Todos' })
     expect(r.map((p) => p.id)).toEqual(['1', '3'])
   })
+  it('casa profissional com a categoria em qualquer posição da lista', () => {
+    const list = [
+      { category: 'Encanador', categories: ['Encanador', 'Eletricista'], plan: 'ouro', uf: '', cidade: '' },
+      { category: 'Pintor', categories: ['Pintor'], plan: 'prata', uf: '', cidade: '' },
+    ]
+    const out = filterProfessionals(list, { category: 'Eletricista', plan: 'Todos', uf: 'Todas', cidade: 'Todas', bairro: 'Todos' })
+    expect(out.map((p) => p.category)).toEqual(['Encanador'])
+  })
+  it('fallback legado quando categories está vazio', () => {
+    const list = [{ category: 'Encanador', categories: [], plan: 'bronze', uf: '', cidade: '' }]
+    const out = filterProfessionals(list, { category: 'Encanador', plan: 'Todos', uf: 'Todas', cidade: 'Todas', bairro: 'Todos' })
+    expect(out).toHaveLength(1)
+  })
 })
 
 describe('paginate', () => {

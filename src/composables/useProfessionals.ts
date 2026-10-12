@@ -36,7 +36,9 @@ function resetDirectoryFilters() {
 }
 
 const availableCategories = computed(() => {
-  const cats = new Set(professionals.value.map(p => p.category).filter(Boolean))
+  const cats = new Set(
+    professionals.value.flatMap(p => [p.category, ...(p.categories ?? [])].map(c => (c || '').trim()).filter(Boolean)),
+  )
   return ['Todas', ...Array.from(cats).sort()]
 })
 

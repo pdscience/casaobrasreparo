@@ -10,11 +10,16 @@ export interface DirectoryFilters {
   bairro: string
 }
 
+export function categoriesOf(p: { category: string; categories?: string[] }): string[] {
+  const list = [...(p.categories ?? []), p.category].map((c) => c.trim()).filter(Boolean)
+  return [...new Set(list)]
+}
+
 export function filterProfessionals<
-  T extends { category: string; plan: string; uf?: string; cidade?: string; coverage_bairros?: string[] },
+  T extends { category: string; categories?: string[]; plan: string; uf?: string; cidade?: string; coverage_bairros?: string[] },
 >(list: T[], f: DirectoryFilters): T[] {
   let out = list
-  if (f.category !== 'Todas') out = out.filter((p) => p.category === f.category)
+  if (f.category !== 'Todas') out = out.filter((p) => categoriesOf(p).includes(f.category))
   if (f.plan !== 'Todos') out = out.filter((p) => p.plan === f.plan)
   if (f.uf !== 'Todas') out = out.filter((p) => (p.uf || '').trim().toUpperCase() === f.uf.trim().toUpperCase())
   if (f.cidade !== 'Todas') out = out.filter((p) => normalizeFilter(p.cidade || '') === normalizeFilter(f.cidade))
