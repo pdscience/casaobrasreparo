@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Professional, Plan } from '../types'
-import { Star, MessageCircle, X, MapPin, FileText, User } from 'lucide-vue-next'
+import { Star, MessageCircle, X, MapPin, FileText, User, Wrench } from 'lucide-vue-next'
 import { buildWhatsAppLink } from '../lib/whatsapp'
 
 const props = defineProps<{
@@ -54,20 +54,23 @@ const cityLine = computed(() => {
           <span
             v-if="professional.plan"
             :class="[planInfo?.badge_bg, planInfo?.badge_text, planInfo?.badge_border]"
-            class="text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0"
+            class="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0"
           >
             {{ professional.plan }}
           </span>
         </div>
-        <p class="text-xs text-amber-400 font-semibold mt-0.5 truncate">{{ professional.category }}</p>
-        <p v-if="cityLine" class="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5 truncate">
+        <p class="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate max-w-full">
+          <Wrench class="w-3 h-3 shrink-0" />
+          <span class="truncate">{{ professional.category }}</span>
+        </p>
+        <p v-if="cityLine" class="flex items-center gap-1 text-[12px] text-slate-400 mt-0.5 truncate">
           <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
           {{ cityLine }}
         </p>
         <span class="inline-flex items-center gap-1.5 mt-1.5 bg-slate-950/70 border border-slate-800 rounded-full px-2 py-0.5">
           <Star class="w-3 h-3 fill-amber-400 text-amber-400" />
-          <span class="text-[11px] font-bold text-slate-200">{{ professional.rating ?? 0 }}</span>
-          <span class="text-[10px] text-slate-500">({{ professional.reviews_count ?? 0 }})</span>
+          <span class="text-[12px] font-bold text-slate-200">{{ professional.rating ?? 0 }}</span>
+          <span class="text-[11px] text-slate-500">({{ professional.reviews_count ?? 0 }})</span>
         </span>
       </div>
     </div>
@@ -76,7 +79,7 @@ const cityLine = computed(() => {
     <div class="px-4 pb-3 flex-1 space-y-2">
       <div class="flex items-start gap-2">
         <FileText class="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-        <p class="text-[11px] text-slate-300 leading-relaxed line-clamp-3">
+        <p class="text-[12px] text-slate-300 leading-relaxed line-clamp-3">
           {{ professional.bio?.trim() || 'Profissional sem descrição ainda.' }}
         </p>
       </div>
