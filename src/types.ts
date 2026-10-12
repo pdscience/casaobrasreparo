@@ -24,6 +24,8 @@ export interface Professional {
   pix_key: string
   bio: string
   coverage_bairros: string[]
+  categories: string[]
+  portfolio_photos: string[]
   cidade: string
   uf: string
   plan: 'gratuito' | 'bronze' | 'prata' | 'ouro'
@@ -69,6 +71,8 @@ export interface Plan {
   rank: number
   monthly_price: number
   request_limit: number | null
+  max_photos: number
+  max_categories: number | null
   receives_broadcasts: boolean
   show_whatsapp_to_client: boolean
   client_visible: boolean
