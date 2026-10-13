@@ -1,0 +1,143 @@
+import { createClient } from 'npm:@insforge/sdk'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Cron-Key',
+}
+
+// Janela de leitura e teto por execução (anti-spam em caso de atraso do schedule).
+const WINDOW_MINUTES = 3
+const MAX_SENDS_PER_RUN = 50
+
+function onlyDigits(phone: string): string {
+  const digits = (phone || '').replace(/\D/g, '')
+  return digits.startsWith('55') ? digits : `55${digits}`
+}
+
+async function alreadyLogged(
+  client: ReturnType<typeof createClient>,
+  requestId: string,
+  proId: string,
+): Promise<boolean> {
+  const { data } = await client.database
+    .from('notification_log')
+    .select('id')
+    .eq('request_id', requestId)
+    .eq('pro_id', proId)
+    .eq('channel', 'whatsapp')
+    .limit(1)
+  return (data ?? []).length > 0
+}
+
+async function sendTemplate(
+  token: string,
+  phoneId: string,
+  template: string,
+  to: string,
+  params: string[],
+): Promise<boolean> {
+  try {
+    const resp = await fetch(`https://graph.facebook.com/v22.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to,
+        type: 'template',
+        template: {
+          name: template,
+          language: { code: 'pt_BR' },
+          components: [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }],
+        },
+      }),
+    })
+    return resp.ok
+  } catch (err) {
+    console.error('Erro ao enviar WhatsApp:', err)
+    return false
+  }
+}
+
+export default async function (req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders })
+  }
+
+  const cronKey = Deno.env.get('NOTIFY_CRON_KEY')
+  if (!cronKey || req.headers.get('X-Cron-Key') !== cronKey) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const token = Deno.env.get('WHATSAPP_TOKEN')
+  const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
+  const template = Deno.env.get('WHATSAPP_TEMPLATE') || 'novo_pedido'
+  if (!token || !phoneId) {
+    return new Response(JSON.stringify({ skipped: 'whatsapp_not_configured' }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const client = createClient({
+    baseUrl: Deno.env.get('INSFORGE_BASE_URL'),
+    anonKey: Deno.env.get('ANON_KEY'),
+  })
+
+  const since = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000).toISOString()
+  const { data: reqs, error: reqError } = await client.database
+    .from('service_requests')
+    .select('id, category, client_address')
+    .eq('broadcast', true)
+    .is('professional_id', null)
+    .eq('status', 'Pendente')
+    .gt('created_at', since)
+    .limit(20)
+  if (reqError) {
+    console.error('Erro ao ler broadcasts:', reqError)
+    return new Response(JSON.stringify({ error: 'Erro ao ler pedidos' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  const { data: pros } = await client.database
+    .from('professionals')
+    .select('id, phone, category, categories, plan, alerts_enabled')
+  const { data: plans } = await client.database
+    .from('plans')
+    .select('id, receives_broadcasts')
+  const okPlans = new Set((plans ?? []).filter((p) => p.receives_broadcasts).map((p) => p.id))
+
+  let sent = 0
+  let failed = 0
+  for (const r of reqs ?? []) {
+    for (const p of pros ?? []) {
+      if (sent >= MAX_SENDS_PER_RUN) break
+      if (p.alerts_enabled === false || !okPlans.has(p.plan) || !p.phone) continue
+      const cats = [p.category, ...((p.categories as string[] | null) ?? [])]
+      if (!cats.includes(r.category)) continue
+      if (await alreadyLogged(client, r.id, p.id)) continue
+      const ok = await sendTemplate(token, phoneId, template, onlyDigits(p.phone), [
+        String(r.category ?? ''),
+        String(r.client_address ?? '').slice(0, 60),
+      ])
+      if (ok) {
+        await client.database
+          .from('notification_log')
+          .insert([{ request_id: r.id, pro_id: p.id, channel: 'whatsapp' }])
+        sent++
+      } else {
+        failed++
+      }
+    }
+  }
+
+  return new Response(JSON.stringify({ sent, scanned: (reqs ?? []).length, failed }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}

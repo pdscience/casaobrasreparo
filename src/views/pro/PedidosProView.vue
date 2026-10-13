@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { statusSteps } from '../../lib/requestStatus'
 import { buildWhatsAppLink } from '../../lib/whatsapp'
+import { updateProfessional } from '../../api/insforgeService'
 import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
@@ -45,6 +46,12 @@ function toggleAlerts() {
   } catch {
     // privado: preferência vale só na sessão
   }
+  if (proProfile.value.id) {
+    updateProfessional(proProfile.value.id, { alerts_enabled: proAlerts.value }).catch((err) => {
+      console.error('Erro ao salvar preferência de alertas:', err)
+      pushToast('error', 'Não foi possível salvar a preferência de alertas.')
+    })
+  }
 }
 
 const knownRequestIds = ref<Set<string>>(new Set())
@@ -62,6 +69,7 @@ async function pollRequests() {
 }
 
 onMounted(() => {
+  if (proProfile.value.alerts_enabled === false) proAlerts.value = false
   knownRequestIds.value = new Set(proRequests.value.map((r) => r.id))
   document.title = BASE_TITLE
   pollTimer = setInterval(() => { void pollRequests() }, 30000)

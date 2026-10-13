@@ -36,6 +36,7 @@ export interface Professional {
   stripe_subscription_id: string | null
   plan_expires_at: string | null
   trial_used: boolean
+  alerts_enabled?: boolean
   requests_this_month: number
   requests_reset_at: string | null
 }
