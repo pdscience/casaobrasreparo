@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import { statusSteps } from '../../lib/requestStatus'
 import { buildWhatsAppLink } from '../../lib/whatsapp'
 import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
-import { useUi } from '../../composables/useUi'
+import { useUi, pushToast } from '../../composables/useUi'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import {
   SlidersHorizontal,
@@ -17,13 +18,60 @@ import {
   CheckCircle2,
   MessageSquare,
   Clock,
+  Bell,
+  BellOff,
 } from 'lucide-vue-next'
 
 const { userMode, proProfile } = useAuth()
 const { activeTab, goToTab } = useNavigation()
-const { proRequests, handleUpdateStatus } = useRequests()
+const { proRequests, handleUpdateStatus, loadData } = useRequests()
 const { canReceiveRequests } = usePlans()
 const { scheduleModal, schedulePrice } = useUi()
+
+const BASE_TITLE = 'Casa Obras e Reparos - Gestão, Orçamentos & Agendamento com IA'
+
+function readAlertsPref(): boolean {
+  try {
+    return localStorage.getItem('casaobra_pro_alerts') !== 'off'
+  } catch {
+    return true
+  }
+}
+const proAlerts = ref<boolean>(readAlertsPref())
+function toggleAlerts() {
+  proAlerts.value = !proAlerts.value
+  try {
+    localStorage.setItem('casaobra_pro_alerts', proAlerts.value ? 'on' : 'off')
+  } catch {
+    // privado: preferência vale só na sessão
+  }
+}
+
+const knownRequestIds = ref<Set<string>>(new Set())
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+async function pollRequests() {
+  if (document.hidden || !proAlerts.value) return
+  await loadData()
+  const current = new Set(proRequests.value.map((r) => r.id))
+  const fresh = proRequests.value.filter((r) => !knownRequestIds.value.has(r.id))
+  knownRequestIds.value = current
+  if (fresh.length === 0) return
+  document.title = `(${fresh.length}) ${BASE_TITLE}`
+  pushToast('info', fresh.length === 1 ? 'Novo pedido na sua região!' : `${fresh.length} novos pedidos na sua região!`)
+}
+
+onMounted(() => {
+  knownRequestIds.value = new Set(proRequests.value.map((r) => r.id))
+  document.title = BASE_TITLE
+  pollTimer = setInterval(() => { void pollRequests() }, 30000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = null
+  document.title = BASE_TITLE
+})
 </script>
 
 <template>
@@ -42,9 +90,19 @@ const { scheduleModal, schedulePrice } = useUi()
             </p>
           </div>
 
-          <div class="flex items-center gap-2 text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-            <span class="text-slate-300 font-medium">Modo Ativo de Recebimento de Chamados</span>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+              <span class="text-slate-300 font-medium">Modo Ativo de Recebimento de Chamados</span>
+            </div>
+            <button
+              @click="toggleAlerts"
+              :title="proAlerts ? 'Desativar alertas de pedidos' : 'Ativar alertas de pedidos'"
+              class="flex items-center gap-2 text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl hover:border-amber-500/50 transition-all"
+            >
+              <component :is="proAlerts ? Bell : BellOff" class="w-3.5 h-3.5" :class="proAlerts ? 'text-amber-400' : 'text-slate-500'" />
+              <span class="text-slate-300 font-medium">{{ proAlerts ? 'Alertas ativados' : 'Alertas pausados' }}</span>
+            </button>
           </div>
         </div>
 
