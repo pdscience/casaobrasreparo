@@ -1,5 +1,5 @@
 import { insforge } from '../lib/insforge'
-import type { AIAnalysis, Plan, Professional, ServiceRequest, User } from '../types'
+import type { AIAnalysis, Plan, Professional, Referral, ServiceRequest, User } from '../types'
 
 export async function getServiceRequests(): Promise<ServiceRequest[]> {
   const { data, error } = await insforge.database
@@ -41,6 +41,17 @@ export async function getProfessionals(): Promise<Professional[]> {
 
   if (error) throw error
   return (data as Professional[]) || []
+}
+
+export async function getReferrals(referrerProId: string): Promise<Referral[]> {
+  const { data, error } = await insforge.database
+    .from('referrals')
+    .select('*')
+    .eq('referrer_pro_id', referrerProId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return (data as Referral[]) || []
 }
 
 export async function getProfessional(id: string): Promise<Professional | null> {

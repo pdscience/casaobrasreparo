@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
-import { activateTrial } from '../../api/insforgeService'
+import { useProfessionals } from '../../composables/useProfessionals'
+import { activateTrial, getReferrals } from '../../api/insforgeService'
+import type { Referral } from '../../types'
 import { pushToast } from '../../composables/useUi'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import {
@@ -19,6 +21,8 @@ import {
   Sparkles,
   SlidersHorizontal,
   Check,
+  Copy,
+  Share2,
 } from 'lucide-vue-next'
 
 const { userMode, proProfile, showProfileModal, loadProfessionalProfile } = useAuth()
@@ -48,6 +52,38 @@ async function handleActivateTrial() {
   } catch (err) {
     console.error('Erro ao ativar trial:', err)
     pushToast('error', 'Não foi possível ativar o teste. Tente novamente.')
+  }
+}
+
+const myReferrals = ref<Referral[]>([])
+const { findProfessional } = useProfessionals()
+async function loadReferrals() {
+  if (!proProfile.value.id) {
+    myReferrals.value = []
+    return
+  }
+  try {
+    myReferrals.value = await getReferrals(proProfile.value.id)
+  } catch (err) {
+    console.error('Erro ao carregar indicações:', err)
+  }
+}
+watch(() => proProfile.value.id, loadReferrals, { immediate: true })
+
+const referralLink = computed(() => proProfile.value.referral_code
+  ? `${window.location.origin}/#/?ref=${proProfile.value.referral_code}`
+  : '')
+const whatsappShareLink = computed(() => proProfile.value.referral_code
+  ? `https://wa.me/?text=${encodeURIComponent(`Conheça a CasaObraReparos! Cadastre-se como profissional com meu código: ${referralLink.value}`)}`
+  : '')
+
+async function copyReferralLink() {
+  if (!referralLink.value) return
+  try {
+    await navigator.clipboard.writeText(referralLink.value)
+    pushToast('success', 'Link de indicação copiado!')
+  } catch {
+    pushToast('error', 'Não foi possível copiar. Anote o código manualmente.')
   }
 }
 </script>
@@ -266,6 +302,60 @@ async function handleActivateTrial() {
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Indique e Ganhe -->
+        <div v-if="proProfile.id" class="bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-4">
+          <div>
+            <h3 class="font-bold text-white flex items-center gap-2">
+              <Share2 class="w-4 h-4 text-amber-400" />
+              Indique e ganhe dias de ouro
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">
+              Compartilhe seu código: a cada indicado que concluir o 1º serviço, você ganha +30 dias de ouro e ele ganha +7 dias.
+            </p>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <code class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-amber-300 font-bold tracking-widest text-center sm:text-left">
+              {{ proProfile.referral_code ?? '...' }}
+            </code>
+            <button
+              :disabled="!referralLink"
+              @click="copyReferralLink"
+              class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold hover:bg-slate-700 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+            >
+              <Copy class="w-3.5 h-3.5" /> Copiar link
+            </button>
+            <a
+              v-if="whatsappShareLink"
+              :href="whatsappShareLink"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 transition-all flex items-center justify-center gap-1.5"
+            >
+              <Share2 class="w-3.5 h-3.5" /> WhatsApp
+            </a>
+          </div>
+          <div v-if="myReferrals.length > 0" class="space-y-2">
+            <div
+              v-for="r in myReferrals"
+              :key="r.id"
+              class="flex items-center justify-between gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5"
+            >
+              <span class="text-xs text-slate-200 font-bold truncate">{{ findProfessional(r.referred_pro_id)?.name ?? 'Profissional' }}</span>
+              <span
+                :class="[
+                  'text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0',
+                  r.status === 'premiado'
+                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                    : 'bg-slate-800 text-slate-300 border-slate-700',
+                ]"
+              >
+                {{ r.status === 'premiado' ? 'Premiado' : 'Cadastrado' }}
+              </span>
+            </div>
+          </div>
+          <p v-else class="text-[11px] text-slate-500">Nenhuma indicação ainda. Compartilhe seu código!</p>
         </div>
       </div>
 </template>
