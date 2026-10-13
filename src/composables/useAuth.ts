@@ -37,6 +37,8 @@ const proProfile = ref<Professional>({
   stripe_subscription_id: null,
   plan_expires_at: null,
   trial_used: false,
+  referral_code: null,
+  referred_by: null,
   requests_this_month: 0,
   requests_reset_at: null,
 })
@@ -178,12 +180,17 @@ async function handleRegister() {
     })
     userProfile.value = record
     if (authRole.value === 'pro') {
+      let storedRef: string | null = null
+      try { storedRef = localStorage.getItem('casaobra_ref') } catch { storedRef = null }
+      if (storedRef && !/^[A-Z0-9]{8}$/.test(storedRef)) storedRef = null
+      try { localStorage.removeItem('casaobra_ref') } catch { /* mantém o código p/ próxima tentativa */ }
       const pro = await createProfessional({
         auth_id: user.id,
         name: registerForm.value.name.trim(),
         category: registerForm.value.category,
         categories: registerForm.value.category ? [registerForm.value.category] : [],
         portfolio_photos: [],
+        referred_by: storedRef,
         email: registerForm.value.email.trim(),
         phone: '',
         rating: 0,
@@ -250,6 +257,8 @@ async function handleLogout() {
     stripe_subscription_id: null,
     plan_expires_at: null,
     trial_used: false,
+    referral_code: null,
+    referred_by: null,
     requests_this_month: 0,
     requests_reset_at: null,
   }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { trackEvent, getWhatsAppNumber } from '../../lib/analytics'
@@ -32,6 +33,7 @@ import {
 } from 'lucide-vue-next'
 
 const { isLanding } = useAuth()
+const route = useRoute()
 const {
   activeTab, activeSection, teslaSections,
   goToTab, goToModule, scrollToId, trackCta,
@@ -174,6 +176,10 @@ function handleLandingCategory(categoryName: string) {
 const lojaUrl = '/loja.png'
 
 onMounted(() => {
+  const ref = typeof route.query.ref === 'string' ? route.query.ref : ''
+  if (/^[A-Z0-9]{8}$/.test(ref)) {
+    try { localStorage.setItem('casaobra_ref', ref) } catch { /* privado: segue sem referral */ }
+  }
   window.addEventListener('pointermove', onCursorMove, { passive: true })
   nextTick(() => initPremiumMotion())
 })

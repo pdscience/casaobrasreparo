@@ -219,6 +219,7 @@ async function handleSave() {
           stripe_subscription_id: null,
           plan_expires_at: null,
           trial_used: false,
+          referred_by: null,
           requests_this_month: 0,
           requests_reset_at: null,
         })

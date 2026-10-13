@@ -14,6 +14,8 @@ export interface AIAnalysis {
 export interface Professional {
   id: string
   auth_id?: string | null
+  referral_code: string | null
+  referred_by: string | null
   name: string
   category: string
   email: string
@@ -36,6 +38,14 @@ export interface Professional {
   trial_used: boolean
   requests_this_month: number
   requests_reset_at: string | null
+}
+
+export interface Referral {
+  id: string
+  referrer_pro_id: string
+  referred_pro_id: string
+  status: 'cadastrado' | 'premiado'
+  created_at?: string
 }
 
 export interface ServiceRequest {

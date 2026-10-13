@@ -76,7 +76,7 @@ type ProfessionalDbDefaults =
   | 'requests_this_month'
   | 'requests_reset_at'
 
-type CreateProfessionalInput = Omit<Professional, 'id' | ProfessionalDbDefaults> &
+type CreateProfessionalInput = Omit<Professional, 'id' | ProfessionalDbDefaults | 'referral_code'> &
   Partial<Pick<Professional, ProfessionalDbDefaults>>
 
 export async function createProfessional(professional: CreateProfessionalInput): Promise<Professional> {
