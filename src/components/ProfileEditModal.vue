@@ -197,6 +197,9 @@ async function handleSave() {
       try {
         const ownerId = props.authId
         const avatarUrl = avatarFile.value ? await uploadProfessionalAvatar(avatarFile.value, ownerId) : ''
+        let storedRef: string | null = null
+        try { storedRef = localStorage.getItem('casaobra_ref') } catch { storedRef = null }
+        if (storedRef && !/^[A-Z0-9]{8}$/.test(storedRef)) storedRef = null
         const created = await createProfessional({
           name: trimmedName,
           category: selectedCategories.value[0] ?? '',
@@ -219,10 +222,11 @@ async function handleSave() {
           stripe_subscription_id: null,
           plan_expires_at: null,
           trial_used: false,
-          referred_by: null,
+          referred_by: storedRef,
           requests_this_month: 0,
           requests_reset_at: null,
         })
+        try { localStorage.removeItem('casaobra_ref') } catch { /* mantém p/ próxima tentativa */ }
         emit('saved', created)
         emit('close')
       } catch (err) {

@@ -15,6 +15,22 @@ function onlyDigits(phone: string): string {
   return digits.startsWith('55') ? digits : `55${digits}`
 }
 
+// Heurística documentada: sem dados de área no pro OU sem endereço no pedido,
+// não filtra (melhor notificar a mais do que perder lead); senão exige
+// sobreposição cidade/UF/bairro nos dois sentidos.
+function areaMatches(
+  address: string,
+  pro: { cidade?: string | null; uf?: string | null; coverage_bairros?: string[] | null },
+): boolean {
+  const addr = (address || '').trim().toLowerCase()
+  if (!addr) return true
+  const areas = [pro.cidade ?? '', pro.uf ?? '', ...((pro.coverage_bairros as string[] | null) ?? [])]
+    .map((a) => (a || '').trim().toLowerCase())
+    .filter(Boolean)
+  if (areas.length === 0) return true
+  return areas.some((a) => addr.includes(a) || a.includes(addr))
+}
+
 async function alreadyLogged(
   client: ReturnType<typeof createClient>,
   requestId: string,
@@ -106,7 +122,7 @@ export default async function (req: Request): Promise<Response> {
 
   const { data: pros } = await client.database
     .from('professionals')
-    .select('id, phone, category, categories, plan, alerts_enabled')
+    .select('id, phone, category, categories, cidade, uf, coverage_bairros, plan, alerts_enabled')
   const { data: plans } = await client.database
     .from('plans')
     .select('id, receives_broadcasts')
@@ -120,6 +136,7 @@ export default async function (req: Request): Promise<Response> {
       if (p.alerts_enabled === false || !okPlans.has(p.plan) || !p.phone) continue
       const cats = [p.category, ...((p.categories as string[] | null) ?? [])]
       if (!cats.includes(r.category)) continue
+      if (!areaMatches(String(r.client_address ?? ''), p)) continue
       if (await alreadyLogged(client, r.id, p.id)) continue
       const ok = await sendTemplate(token, phoneId, template, onlyDigits(p.phone), [
         String(r.category ?? ''),
