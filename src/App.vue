@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { onMounted, onUnmounted, watch, nextTick, ref } from 'vue'
 import { trackEvent } from './lib/analytics'
 import { CATEGORIES } from './lib/categories'
 import { useAuth } from './composables/useAuth'
@@ -31,6 +31,21 @@ const {
   loadData,
 } = useRequests()
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+}
+const installPrompt = ref<BeforeInstallPromptEvent | null>(null)
+
+function onBeforeInstallPrompt(e: Event) {
+  e.preventDefault()
+  installPrompt.value = e as BeforeInstallPromptEvent
+}
+async function installApp() {
+  if (!installPrompt.value) return
+  await installPrompt.value.prompt()
+  installPrompt.value = null
+}
+
 // ---------- Views públicas (landing + diretório) em src/views ----------
 
 onMounted(() => {
@@ -38,6 +53,8 @@ onMounted(() => {
   hydrateAuth()
   trackEvent('page_view_landing', { path: window.location.pathname })
   window.addEventListener('scroll', onPageScroll, { passive: true })
+  window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
+  window.addEventListener('appinstalled', () => { installPrompt.value = null })
   onPageScroll()
   // Reavalia o header quando a landing entra em cena (scroll state global fica no shell — ruling 8)
   watch(isLanding, (v) => {
@@ -47,6 +64,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onPageScroll)
+  window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
 })
 </script>
 <template>
@@ -83,6 +101,27 @@ onUnmounted(() => {
 
     <AppFooter />
     <ToastHost />
+
+    <!-- Banner de instalação PWA -->
+    <div
+      v-if="installPrompt"
+      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900 border border-amber-500/30 rounded-2xl px-4 py-3 shadow-xl"
+    >
+      <p class="text-xs text-slate-200 font-bold">Instale o app para acesso rápido</p>
+      <button
+        @click="installApp"
+        class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all whitespace-nowrap"
+      >
+        Instalar
+      </button>
+      <button
+        @click="installPrompt = null"
+        class="text-slate-400 hover:text-white text-xs font-bold px-1"
+        title="Dispensar"
+      >
+        ×
+      </button>
+    </div>
   </div>
 </template>
 
