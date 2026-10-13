@@ -259,6 +259,14 @@ export async function changePlan(professionalId: string, targetPlan: string): Pr
   return data as { subscriptionId: string; status: string }
 }
 
+export async function activateTrial(professionalId: string): Promise<{ plan: string; expires_at: string }> {
+  const { data, error } = await insforge.functions.invoke('activate-trial', {
+    body: { professionalId },
+  })
+  if (error) throw error
+  return data as { plan: string; expires_at: string }
+}
+
 export async function createCheckoutSession(professionalId: string, plan: string, email: string): Promise<{ url: string }> {
   const { data: planData, error: planError } = await insforge.database
     .from('plans')

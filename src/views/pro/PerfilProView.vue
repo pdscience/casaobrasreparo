@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
+import { activateTrial } from '../../api/insforgeService'
+import { pushToast } from '../../composables/useUi'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import {
   Building2,
@@ -18,7 +21,7 @@ import {
   Check,
 } from 'lucide-vue-next'
 
-const { userMode, proProfile, showProfileModal } = useAuth()
+const { userMode, proProfile, showProfileModal, loadProfessionalProfile } = useAuth()
 const { activeTab } = useNavigation()
 const { requests } = useRequests()
 const {
@@ -27,6 +30,26 @@ const {
   PLAN_LABELS, PLAN_PRICES,
   subscribePlan, handleOpenPortal,
 } = usePlans()
+
+const trialDaysLeft = computed(() => {
+  if (!proProfile.value.plan_expires_at) return 0
+  return Math.max(0, Math.ceil((new Date(proProfile.value.plan_expires_at).getTime() - Date.now()) / 86400000))
+})
+const trialEndLabel = computed(() => proProfile.value.plan_expires_at
+  ? new Date(proProfile.value.plan_expires_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  : '')
+
+async function handleActivateTrial() {
+  if (!proProfile.value.id) return
+  try {
+    await activateTrial(proProfile.value.id)
+    if (proProfile.value.auth_id) await loadProfessionalProfile(proProfile.value.auth_id)
+    pushToast('success', 'Teste de 30 dias do plano Ouro ativado!')
+  } catch (err) {
+    console.error('Erro ao ativar trial:', err)
+    pushToast('error', 'Não foi possível ativar o teste. Tente novamente.')
+  }
+}
 </script>
 
 <template>
@@ -175,6 +198,30 @@ const {
             >
               <SlidersHorizontal class="w-5 h-5" />
               Gerenciar Assinatura
+            </button>
+          </div>
+
+          <!-- Trial -->
+          <div v-if="proProfile.plan_status === 'trialing'" class="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <p class="text-xs text-amber-200">
+              Você está testando o <strong>OURO grátis até {{ trialEndLabel }}</strong> ({{ trialDaysLeft }} dias restantes).
+            </p>
+            <button
+              @click="subscribePlan('ouro')"
+              class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all whitespace-nowrap"
+            >
+              Continuar no ouro
+            </button>
+          </div>
+          <div v-else-if="proProfile.plan === 'gratuito' && !proProfile.trial_used && proProfile.id" class="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <p class="text-xs text-slate-300">
+              Teste o <strong class="text-amber-300">OURO grátis por 30 dias</strong>, sem cartão.
+            </p>
+            <button
+              @click="handleActivateTrial"
+              class="px-4 py-2 rounded-xl bg-slate-800 text-amber-300 border border-amber-500/30 text-xs font-bold hover:bg-slate-700 transition-all whitespace-nowrap"
+            >
+              Ativar 30 dias grátis
             </button>
           </div>
 

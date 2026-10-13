@@ -33,6 +33,7 @@ export interface Professional {
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   plan_expires_at: string | null
+  trial_used: boolean
   requests_this_month: number
   requests_reset_at: string | null
 }

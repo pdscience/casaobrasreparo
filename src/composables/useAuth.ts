@@ -9,9 +9,10 @@ import {
   createUserRecord,
   createProfessional,
   getProfessionalByAuthId,
+  updateProfessional,
 } from '../api/insforgeService'
 import { useNavigation } from './useNavigation'
-import { useUi } from './useUi'
+import { useUi, pushToast } from './useUi'
 import { useProfessionals } from './useProfessionals'
 
 const proProfile = ref<Professional>({
@@ -35,6 +36,7 @@ const proProfile = ref<Professional>({
   stripe_customer_id: null,
   stripe_subscription_id: null,
   plan_expires_at: null,
+  trial_used: false,
   requests_this_month: 0,
   requests_reset_at: null,
 })
@@ -90,6 +92,24 @@ async function loadProfessionalProfile(authId: string) {
   try {
     const pro = await getProfessionalByAuthId(authId)
     if (pro) proProfile.value = pro
+    if (
+      proProfile.value.id &&
+      proProfile.value.plan_status === 'trialing' &&
+      proProfile.value.plan_expires_at &&
+      new Date(proProfile.value.plan_expires_at).getTime() < Date.now()
+    ) {
+      try {
+        const demoted = await updateProfessional(proProfile.value.id, {
+          plan: 'gratuito',
+          plan_status: 'active',
+          plan_expires_at: null,
+        })
+        proProfile.value = demoted
+        pushToast('info', 'Seu período de teste terminou. Você voltou ao plano gratuito.')
+      } catch {
+        // mantém o estado local; nova tentativa no próximo login
+      }
+    }
   } catch {
     // profile missing is handled by the UI
   }
@@ -179,6 +199,7 @@ async function handleRegister() {
         stripe_customer_id: null,
         stripe_subscription_id: null,
         plan_expires_at: null,
+        trial_used: false,
         requests_this_month: 0,
         requests_reset_at: null,
       })
@@ -228,6 +249,7 @@ async function handleLogout() {
     stripe_customer_id: null,
     stripe_subscription_id: null,
     plan_expires_at: null,
+    trial_used: false,
     requests_this_month: 0,
     requests_reset_at: null,
   }
