@@ -84,12 +84,14 @@ Props com `v-model`: `countryCode`, `stateCode`, `stateName`, `municipality`, `s
 
 ### `src/components/PhoneInput.vue`
 
-Props com `v-model`: `phone` (E.164), `phoneCountryCode`.
+Props com `v-model`: `phone` (E.164) e `phoneCountry` (ISO2 do país do telefone).
 
-- `<select>` de DDI com os 250 países + `+<dial>`.
+- `<select>` de país com os 250 países, rótulo `🇧🇷 +55`. O país é escolhido pelo **código ISO**, não pelo DDI — assim `+1` (EUA) e `+1` (Canadá) não colidem, e a máscara sai correta.
 - Input com máscara por país via `AsYouType` do `libphonenumber-js` (BR → `(11) 98765-4321`, US → `(201) 555-0123`, ES → `612 34 56 78`).
-- Ao montar, o DDI é sincronizado com o país do endereço (editável pelo usuário).
-- Validação: `parsePhoneNumberFromString` → precisa ser *possible*; erro exibido em texto abaixo do campo.
+- O DDI gravado em `phone_country_code` é derivado do ISO escolhido via `dialOf(countryCode)` — não é um campo editável à parte.
+- O país do telefone é **independente** do país do endereço: um profissional brasileiro morando na Espanha com telefone espanhol é um caso válido.
+- Ao montar, o país do telefone é deduzido do próprio E.164 (`countryFromE164`), que é inequívoco; se o telefone estiver vazio, assume o país do endereço.
+- Validação: o input emite E.164 e o erro aparece em texto abaixo do campo. Um número inválido **não apaga** o que já foi digitado.
 
 ### Bibliotecas
 
@@ -99,7 +101,7 @@ Props com `v-model`: `phone` (E.164), `phoneCountryCode`.
 ## Libs
 
 - `src/lib/geo.ts` — `COUNTRIES`, `countryName(code, lang)`, `flagOf(code)`, `dialOf(code)`, `loadRegions(cc)` (dynamic import + cache em `Map`), `statesFor(cc)`, `citiesFor(cc, stateCode)`.
-- `src/lib/phone.ts` — `formatNational(cc, value)`, `toE164(countryCode, national)`, `validatePhone(countryCode, national)`, `nationalFromE164(e164, countryCode)`, `legacyToE164(phone)`.
+- `src/lib/phone.ts` — `formatNational(cc, value)`, `nationalDigits(value)`, `toE164(countryCode, national)`, `validatePhone(countryCode, national)`, `validateE164(phone)`, `countryFromE164(phone)`, `nationalFromE164(phone, countryCode)`, `legacyToE164(phone)`.
 
 ## Fluxos
 
@@ -138,7 +140,7 @@ Chaves novas em `src/i18n/pt.ts`, `en.ts`, `es.ts`.
 
 **Específicas de formulário:**
 
-`auth.telefone` (rótulo no cadastro), `auth.selecionePais` (placeholder do select de país no cadastro), `profile.telefone` (rótulo no perfil).
+`auth.telefone` (rótulo no cadastro), `profile.telefone` (rótulo no perfil).
 
 Rótulo de estado é **"Estado / Província"** nos três idiomas (PT: "Estado / Província", EN: "State / Province", ES: "Estado / Provincia").
 
