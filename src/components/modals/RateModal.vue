@@ -2,11 +2,13 @@
 import { useAuth } from '../../composables/useAuth'
 import { useUi } from '../../composables/useUi'
 import { useRequests } from '../../composables/useRequests'
+import { useI18n } from '../../composables/useI18n'
 import { Star, X } from 'lucide-vue-next'
 
 const { proProfile } = useAuth()
 const { rateOrderModal, ratingStars, ratingComment } = useUi()
 const { handleSaveRating } = useRequests()
+const { t, categoryText } = useI18n()
 </script>
 
 <template>
@@ -16,7 +18,7 @@ const { handleSaveRating } = useRequests()
     <div class="flex items-center justify-between border-b border-slate-800 pb-3">
       <h3 class="font-bold text-white text-sm flex items-center gap-2">
         <Star class="w-4 h-4 text-amber-400 fill-amber-400" />
-        Avaliar Prestador de Serviço
+        {{ t('modals.rateTitle') }}
       </h3>
       <button @click="rateOrderModal = null" class="text-slate-400 hover:text-white">
         <X class="w-5 h-5" />
@@ -25,7 +27,7 @@ const { handleSaveRating } = useRequests()
 
     <div class="space-y-4 text-xs text-center">
       <p class="text-slate-300">
-        Como foi o atendimento de <strong>{{ proProfile.name }}</strong> para o serviço de {{ rateOrderModal.category }}?
+        {{ t('modals.rateDesc', { name: proProfile.name, category: categoryText(rateOrderModal.category) }) }}
       </p>
 
       <!-- STAR SELECTOR -->
@@ -51,7 +53,7 @@ const { handleSaveRating } = useRequests()
           v-model="ratingComment"
           rows="3"
           class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500 resize-none"
-          placeholder="Escreva um breve comentário sobre a qualidade e pontualidade..."
+          :placeholder="t('modals.ratePlaceholder')"
         />
       </div>
     </div>
@@ -61,13 +63,13 @@ const { handleSaveRating } = useRequests()
         @click="handleSaveRating"
         class="flex-1 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all"
       >
-        Enviar Avaliação
+        {{ t('modals.sendRating') }}
       </button>
       <button
         @click="rateOrderModal = null"
         class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
       >
-        Cancelar
+        {{ t('modals.cancel') }}
       </button>
     </div>
   </div>

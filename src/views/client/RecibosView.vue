@@ -4,8 +4,11 @@ import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { useProfessionals } from '../../composables/useProfessionals'
 import { useUi } from '../../composables/useUi'
+import { useI18n } from '../../composables/useI18n'
 import ClientSubTabs from '../../components/layout/ClientSubTabs.vue'
 import { FileText, Printer } from 'lucide-vue-next'
+
+const { t, categoryText } = useI18n()
 
 const { userMode, proProfile } = useAuth()
 const { activeTab } = useNavigation()
@@ -22,10 +25,10 @@ const { viewReceiptModal } = useUi()
         <div>
           <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <FileText class="w-5 h-5 text-amber-400" />
-            Seus Recibos e Comprovantes Digitais
+            {{ t('clientReceipts.title') }}
           </h2>
           <p class="text-xs text-slate-400 mt-1">
-            Histórico completo de recibos oficiais emitidos para os serviços já concluídos.
+            {{ t('clientReceipts.desc') }}
           </p>
         </div>
 
@@ -41,17 +44,17 @@ const { viewReceiptModal } = useUi()
                   {{ req.id }}
                 </span>
                 <span class="text-[11px] text-slate-400">
-                  Data: {{ req.agendamento?.data || '2026-07-29' }}
+                  {{ t('clientReceipts.date') }}: {{ req.agendamento?.data || '2026-07-29' }}
                 </span>
               </div>
               <h4 class="font-bold text-white text-sm">
-                {{ req.ai_analysis?.summary || req.category }}
+                {{ req.ai_analysis?.summary || categoryText(req.category) }}
               </h4>
               <p class="text-slate-400">
-                Prestador responsável: <strong class="text-slate-200">{{ findProfessional(req.professional_id)?.name || proProfile.name }}</strong>
+                {{ t('clientReceipts.responsible') }}: <strong class="text-slate-200">{{ findProfessional(req.professional_id)?.name || proProfile.name }}</strong>
               </p>
               <div class="text-base font-extrabold text-amber-400 pt-1">
-                R$ {{ req.final_price }},00 <span class="text-[10px] text-slate-500 font-normal">(Valor Quitado)</span>
+                R$ {{ req.final_price }},00 <span class="text-[10px] text-slate-500 font-normal">({{ t('clientReceipts.amountPaid') }})</span>
               </div>
             </div>
 
@@ -59,7 +62,7 @@ const { viewReceiptModal } = useUi()
               @click="viewReceiptModal = req"
               class="w-full py-2.5 rounded-xl bg-slate-800 text-amber-400 border border-amber-500/30 text-xs font-bold hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
             >
-              <Printer class="w-4 h-4" /> Visualizar / Imprimir Recibo
+              <Printer class="w-4 h-4" /> {{ t('clientReceipts.viewPrint') }}
             </button>
           </div>
         </div>

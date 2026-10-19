@@ -8,6 +8,7 @@ import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
 import { useUi, pushToast } from '../../composables/useUi'
+import { useI18n } from '../../composables/useI18n'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import {
   SlidersHorizontal,
@@ -28,6 +29,7 @@ const { activeTab, goToTab } = useNavigation()
 const { proRequests, handleUpdateStatus, loadData } = useRequests()
 const { canReceiveRequests } = usePlans()
 const { scheduleModal, schedulePrice } = useUi()
+const { t, categoryText, statusText } = useI18n()
 
 const BASE_TITLE = 'Casa Obras e Reparos - Gestão, Orçamentos & Agendamento com IA'
 
@@ -49,7 +51,7 @@ function toggleAlerts() {
   if (proProfile.value.id) {
     updateProfessional(proProfile.value.id, { alerts_enabled: proAlerts.value }).catch((err) => {
       console.error('Erro ao salvar preferência de alertas:', err)
-      pushToast('error', 'Não foi possível salvar a preferência de alertas.')
+      pushToast('error', t('toasts.alertsPrefError'))
     })
   }
 }
@@ -65,7 +67,9 @@ async function pollRequests() {
   knownRequestIds.value = current
   if (fresh.length === 0) return
   document.title = `(${fresh.length}) ${BASE_TITLE}`
-  pushToast('info', fresh.length === 1 ? 'Novo pedido na sua região!' : `${fresh.length} novos pedidos na sua região!`)
+  pushToast('info', fresh.length === 1
+    ? t('toasts.newRequestOne')
+    : t('toasts.newRequestMany', { count: fresh.length }))
 }
 
 onMounted(() => {
@@ -91,25 +95,25 @@ onUnmounted(() => {
           <div>
             <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
               <SlidersHorizontal class="w-5 h-5 text-amber-400" />
-              Painel do Prestador - Solicitantes da Região
+              {{ t('pro.panelTitle') }}
             </h2>
             <p class="text-xs text-slate-400 mt-1">
-              Gerencie orçamentos gerados por IA, agende visitas técnicas e atualize o status dos atendimentos.
+              {{ t('pro.panelDesc') }}
             </p>
           </div>
 
           <div class="flex items-center gap-2">
             <div class="flex items-center gap-2 text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
               <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-              <span class="text-slate-300 font-medium">Modo Ativo de Recebimento de Chamados</span>
+              <span class="text-slate-300 font-medium">{{ t('pro.activeMode') }}</span>
             </div>
             <button
               @click="toggleAlerts"
-              :title="proAlerts ? 'Desativar alertas de pedidos' : 'Ativar alertas de pedidos'"
+              :title="proAlerts ? t('pro.disableAlerts') : t('pro.enableAlerts')"
               class="flex items-center gap-2 text-xs bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl hover:border-amber-500/50 transition-all"
             >
               <component :is="proAlerts ? Bell : BellOff" class="w-3.5 h-3.5" :class="proAlerts ? 'text-amber-400' : 'text-slate-500'" />
-              <span class="text-slate-300 font-medium">{{ proAlerts ? 'Alertas ativados' : 'Alertas pausados' }}</span>
+              <span class="text-slate-300 font-medium">{{ proAlerts ? t('pro.alertsOn') : t('pro.alertsOff') }}</span>
             </button>
           </div>
         </div>
@@ -120,9 +124,9 @@ onUnmounted(() => {
             <Lock class="w-7 h-7 text-amber-400" />
           </div>
           <div class="space-y-2">
-            <h3 class="text-lg font-extrabold text-white">Assine um plano para começar a receber pedidos</h3>
+            <h3 class="text-lg font-extrabold text-white">{{ t('pro.subscribeTitle') }}</h3>
             <p class="text-sm text-slate-400 max-w-md mx-auto">
-              Seu perfil está no plano Gratuito. Escolha um plano pago para ver e aceitar os chamados da sua região.
+              {{ t('pro.subscribeDesc') }}
             </p>
           </div>
           <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
@@ -131,13 +135,13 @@ onUnmounted(() => {
               class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
             >
               <Sparkles class="w-4 h-4" />
-              Ver Planos
+              {{ t('pro.viewPlans') }}
             </button>
             <button
               @click="goToTab('perfil_pro')"
               class="px-6 py-3 rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700 font-semibold text-sm hover:bg-slate-700 transition-all"
             >
-              Editar meu perfil primeiro
+              {{ t('pro.editProfileFirst') }}
             </button>
           </div>
         </div>
@@ -155,7 +159,7 @@ onUnmounted(() => {
                 </span>
                 <div>
                   <h3 class="font-bold text-white text-sm">
-                    {{ req.client_name }} • {{ req.category }}
+                    {{ req.client_name }} • {{ categoryText(req.category) }}
                   </h3>
                   <p class="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                     <MapPin class="w-3 h-3 text-slate-500" />
@@ -166,7 +170,7 @@ onUnmounted(() => {
 
               <div class="flex items-center gap-2">
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  {{ req.status }}
+                  {{ statusText(req.status) }}
                 </span>
               </div>
             </div>
@@ -183,37 +187,37 @@ onUnmounted(() => {
                     : 'bg-slate-950 border-slate-800 text-slate-500'
                 ]"
               >
-                <div class="text-[10px] uppercase tracking-wider mb-0.5">Etapa {{ idx + 1 }}</div>
-                <div class="text-xs truncate">{{ step }}</div>
+                <div class="text-[10px] uppercase tracking-wider mb-0.5">{{ t('pro.stage') }} {{ idx + 1 }}</div>
+                <div class="text-xs truncate">{{ statusText(step) }}</div>
               </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4 text-xs">
               <div class="md:col-span-3">
-                <img :src="req.photo_url" alt="Foto do dano" class="w-full h-32 object-cover rounded-xl border border-slate-800" />
+                <img :src="req.photo_url" :alt="t('pro.damagePhotoAlt')" class="w-full h-32 object-cover rounded-xl border border-slate-800" />
               </div>
 
               <div class="md:col-span-6 space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800/80">
                 <p class="font-bold text-amber-400 text-xs">
-                  Diagnóstico da IA: {{ req.ai_analysis?.summary }}
+                  {{ t('pro.aiDiagnosis') }} {{ req.ai_analysis?.summary }}
                 </p>
                 <p class="text-slate-300 leading-relaxed text-[11px]">
                   {{ req.ai_analysis?.description }}
                 </p>
                 <div class="pt-2 border-t border-slate-800/80 text-[11px] text-slate-300">
-                  <strong class="text-slate-400 block mb-0.5">Relato do Cliente:</strong>
+                  <strong class="text-slate-400 block mb-0.5">{{ t('pro.clientReport') }}</strong>
                   &quot;{{ req.notes }}&quot;
                 </div>
               </div>
 
               <div class="md:col-span-3 space-y-2 flex flex-col justify-center">
                 <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
-                  <span class="text-[10px] text-slate-400 block uppercase">Sugestão de Preço IA</span>
+                  <span class="text-[10px] text-slate-400 block uppercase">{{ t('pro.priceSuggestion') }}</span>
                   <span v-if="(req.ai_analysis?.suggestedMinPrice ?? 0) > 0 || (req.ai_analysis?.suggestedMaxPrice ?? 0) > 0" class="text-base font-extrabold text-white">
                     R$ {{ req.ai_analysis?.suggestedMinPrice }} ~ R$ {{ req.ai_analysis?.suggestedMaxPrice }}
                   </span>
                   <span v-else class="text-xs font-bold text-slate-200">
-                    O profissional fornecerá o valor.
+                    {{ t('pro.proWillProvide') }}
                   </span>
                 </div>
 
@@ -224,7 +228,7 @@ onUnmounted(() => {
                   class="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5"
                 >
                   <Calendar class="w-4 h-4" />
-                  Agendar Visita / Definir Preço
+                  {{ t('pro.scheduleVisit') }}
                 </button>
 
                 <button
@@ -233,7 +237,7 @@ onUnmounted(() => {
                   class="w-full py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs hover:bg-cyan-400 transition-all flex items-center justify-center gap-1.5"
                 >
                   <Wrench class="w-4 h-4" />
-                  Iniciar Execução
+                  {{ t('pro.startExecution') }}
                 </button>
 
                 <button
@@ -242,25 +246,25 @@ onUnmounted(() => {
                   class="w-full py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5"
                 >
                   <CheckCircle2 class="w-4 h-4" />
-                  Concluir & Emitir Recibo
+                  {{ t('pro.finishReceipt') }}
                 </button>
 
                 <a
-                  :href="buildWhatsAppLink(req.client_phone, `Olá ${req.client_name}! Aqui é o ${proProfile.name}, prestador de serviços. Vi sua solicitação #${req.id} de ${req.category} e estou disponível para o atendimento.`)"
+                  :href="buildWhatsAppLink(req.client_phone, t('pro.waClient', { name: req.client_name, pro: proProfile.name, id: req.id, category: categoryText(req.category) }))"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="w-full py-2 rounded-xl bg-slate-800 text-amber-400 border border-amber-500/30 font-semibold text-xs hover:bg-slate-700 flex items-center justify-center gap-1.5"
                 >
                   <MessageSquare class="w-4 h-4" />
-                  Contato WhatsApp
+                  {{ t('pro.contactWhatsapp') }}
                 </a>
               </div>
             </div>
           </div>
           <div v-if="proRequests.length === 0" class="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800 space-y-3">
             <Clock class="w-10 h-10 text-slate-600 mx-auto" />
-            <p class="text-sm text-slate-400">Nenhum chamado para a sua categoria no momento.</p>
-            <p class="text-xs text-slate-500">Novos pedidos aparecem aqui assim que clientes solicitam serviços de {{ proProfile.category || 'sua categoria' }}.</p>
+            <p class="text-sm text-slate-400">{{ t('pro.emptyCalls') }}</p>
+            <p class="text-xs text-slate-500">{{ t('pro.emptyCallsDesc', { category: categoryText(proProfile.category) || t('common.profissional') }) }}</p>
           </div>
         </div>
       </div>

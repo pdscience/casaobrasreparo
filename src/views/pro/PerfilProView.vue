@@ -8,6 +8,7 @@ import { useProfessionals } from '../../composables/useProfessionals'
 import { activateTrial, getReferrals } from '../../api/insforgeService'
 import type { Referral } from '../../types'
 import { pushToast } from '../../composables/useUi'
+import { useI18n } from '../../composables/useI18n'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import {
   Building2,
@@ -28,6 +29,7 @@ import {
 const { userMode, proProfile, showProfileModal, loadProfessionalProfile } = useAuth()
 const { activeTab } = useNavigation()
 const { requests } = useRequests()
+const { t, categoryText, lang } = useI18n()
 const {
   displayPlans, requestUsage,
   hasFeature,
@@ -40,7 +42,7 @@ const trialDaysLeft = computed(() => {
   return Math.max(0, Math.ceil((new Date(proProfile.value.plan_expires_at).getTime() - Date.now()) / 86400000))
 })
 const trialEndLabel = computed(() => proProfile.value.plan_expires_at
-  ? new Date(proProfile.value.plan_expires_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  ? new Date(proProfile.value.plan_expires_at).toLocaleDateString(lang.value, { day: '2-digit', month: '2-digit' })
   : '')
 
 async function handleActivateTrial() {
@@ -48,10 +50,10 @@ async function handleActivateTrial() {
   try {
     await activateTrial(proProfile.value.id)
     if (proProfile.value.auth_id) await loadProfessionalProfile(proProfile.value.auth_id)
-    pushToast('success', 'Teste de 30 dias do plano Ouro ativado!')
+    pushToast('success', t('toasts.trialActivated'))
   } catch (err) {
     console.error('Erro ao ativar trial:', err)
-    pushToast('error', 'Não foi possível ativar o teste. Tente novamente.')
+    pushToast('error', t('toasts.trialActivateError'))
   }
 }
 
@@ -74,16 +76,16 @@ const referralLink = computed(() => proProfile.value.referral_code
   ? `${window.location.origin}/#/?ref=${proProfile.value.referral_code}`
   : '')
 const whatsappShareLink = computed(() => proProfile.value.referral_code
-  ? `https://wa.me/?text=${encodeURIComponent(`Conheça a CasaObraReparos! Cadastre-se como profissional com meu código: ${referralLink.value}`)}`
+  ? `https://wa.me/?text=${encodeURIComponent(t('pro.waShare') + ' ' + referralLink.value)}`
   : '')
 
 async function copyReferralLink() {
   if (!referralLink.value) return
   try {
     await navigator.clipboard.writeText(referralLink.value)
-    pushToast('success', 'Link de indicação copiado!')
+    pushToast('success', t('toasts.referralCopied'))
   } catch {
-    pushToast('error', 'Não foi possível copiar. Anote o código manualmente.')
+    pushToast('error', t('toasts.referralCopyError'))
   }
 }
 </script>
@@ -96,14 +98,14 @@ async function copyReferralLink() {
         <!-- CADASTRO: Quando não há profissional cadastrado -->
         <div v-if="!proProfile.id" class="bg-slate-900 rounded-2xl p-8 border border-slate-800 text-center space-y-4">
           <Building2 class="w-14 h-14 text-amber-400 mx-auto" />
-          <h2 class="text-xl font-bold text-white">Você ainda não é um prestador cadastrado</h2>
-          <p class="text-sm text-slate-400 max-w-md mx-auto">Cadastre-se para receber solicitações de serviço dos clientes na sua região.</p>
+          <h2 class="text-xl font-bold text-white">{{ t('pro.notRegisteredTitle') }}</h2>
+          <p class="text-sm text-slate-400 max-w-md mx-auto">{{ t('pro.notRegisteredDesc') }}</p>
           <button
             @click="showProfileModal = true"
             class="px-6 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold text-sm hover:bg-amber-400 transition-all inline-flex items-center gap-2"
           >
             <Wrench class="w-4 h-4" />
-            Cadastrar como Prestador
+            {{ t('pro.registerAsProvider') }}
           </button>
         </div>
 
@@ -123,10 +125,10 @@ async function copyReferralLink() {
                     class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-medium rounded-full border border-blue-500/30"
                   >
                     <ShieldCheck class="w-3 h-3" />
-                    Verificado
+                    {{ t('common.verificado') }}
                   </span>
                 </div>
-                <p class="text-xs text-amber-400 font-semibold">{{ proProfile.category }}</p>
+                <p class="text-xs text-amber-400 font-semibold">{{ categoryText(proProfile.category) }}</p>
                 <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
                   <Phone class="w-3 h-3" /> WhatsApp: {{ proProfile.phone }}
                 </p>
@@ -139,7 +141,7 @@ async function copyReferralLink() {
                 class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold hover:bg-slate-700 flex items-center gap-1.5"
               >
                 <Edit2 class="w-4 h-4 text-amber-400" />
-                Editar Perfil
+                {{ t('pro.editProfile') }}
               </button>
             </div>
           </div>
@@ -152,7 +154,7 @@ async function copyReferralLink() {
 
             <h3 class="font-bold text-white text-base flex items-center gap-2 pt-2">
               <Star class="w-5 h-5 text-amber-400 fill-amber-400" />
-              Avaliações do Perfil ({{ proProfile.reviews_count }} Clientes)
+              {{ t('pro.profileReviews', { count: proProfile.reviews_count }) }}
             </h3>
 
             <div class="space-y-3">
@@ -169,7 +171,7 @@ async function copyReferralLink() {
                 </div>
                 <p class="text-slate-300 italic">&quot;{{ req.rating?.comment }}&quot;</p>
                 <span class="text-[10px] text-slate-500 block pt-1">
-                  Serviço: {{ req.category }} • Data: {{ req.rating?.date }}
+                  {{ t('pro.serviceAndDate', { category: categoryText(req.category), date: req.rating?.date ?? '' }) }}
                 </span>
               </div>
             </div>
@@ -182,7 +184,7 @@ async function copyReferralLink() {
           <div class="bg-slate-900/80 rounded-2xl p-6 border border-slate-800">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-lg font-bold text-white">Seu Plano Atual</h3>
+                <h3 class="text-lg font-bold text-white">{{ t('pro.currentPlan') }}</h3>
                 <p class="text-sm text-slate-400 mt-1">
                   {{ PLAN_LABELS[proProfile.plan] }}
                 </p>
@@ -191,14 +193,14 @@ async function copyReferralLink() {
                 <span class="text-2xl font-extrabold text-amber-400">
                   {{ PLAN_PRICES[proProfile.plan] }}
                 </span>
-                <span class="text-slate-400 text-sm">/mês</span>
+                <span class="text-slate-400 text-sm">{{ t('pro.perMonth') }}</span>
               </div>
             </div>
 
             <!-- Request Usage (plans with finite limits) -->
             <div v-if="proProfile.plan === 'bronze' || proProfile.plan === 'prata'" class="mt-4">
               <div class="flex justify-between text-sm mb-2">
-                <span class="text-slate-400">Pedidos este mês</span>
+                <span class="text-slate-400">{{ t('pro.requestsThisMonth') }}</span>
                 <span class="text-white font-medium">
                   {{ requestUsage.current }}/{{ requestUsage.limit }}
                 </span>
@@ -215,14 +217,14 @@ async function copyReferralLink() {
             <div v-else-if="proProfile.plan === 'ouro'" class="mt-4">
               <span class="inline-flex items-center gap-2 text-green-400 text-sm font-medium">
                 <CheckCircle2 class="w-4 h-4" />
-                Pedidos ilimitados
+                {{ t('pro.unlimitedRequests') }}
               </span>
             </div>
 
             <div v-else class="mt-4">
               <span class="inline-flex items-center gap-2 text-slate-400 text-sm font-medium">
                 <Sparkles class="w-4 h-4" />
-                Assine um plano para começar a receber pedidos
+                {{ t('pro.subscribeToReceive') }}
               </span>
             </div>
 
@@ -233,31 +235,31 @@ async function copyReferralLink() {
               class="mt-4 w-full py-3 px-4 bg-slate-800 text-amber-400 border border-amber-500/30 font-bold rounded-xl hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
             >
               <SlidersHorizontal class="w-5 h-5" />
-              Gerenciar Assinatura
+              {{ t('pro.manageSubscription') }}
             </button>
           </div>
 
           <!-- Trial -->
           <div v-if="proProfile.plan_status === 'trialing'" class="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
             <p class="text-xs text-amber-200">
-              Você está testando o <strong>OURO grátis até {{ trialEndLabel }}</strong> ({{ trialDaysLeft }} dias restantes).
+              {{ t('pro.trialText', { date: trialEndLabel, days: trialDaysLeft }) }}
             </p>
             <button
               @click="subscribePlan('ouro')"
               class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all whitespace-nowrap"
             >
-              Continuar no ouro
+              {{ t('pro.continueOuro') }}
             </button>
           </div>
           <div v-else-if="proProfile.plan === 'gratuito' && !proProfile.trial_used && proProfile.id" class="mt-4 rounded-2xl border border-slate-700 bg-slate-900 p-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
             <p class="text-xs text-slate-300">
-              Teste o <strong class="text-amber-300">OURO grátis por 30 dias</strong>, sem cartão.
+              {{ t('pro.trialOffer') }}
             </p>
             <button
               @click="handleActivateTrial"
               class="px-4 py-2 rounded-xl bg-slate-800 text-amber-300 border border-amber-500/30 text-xs font-bold hover:bg-slate-700 transition-all whitespace-nowrap"
             >
-              Ativar 30 dias grátis
+              {{ t('pro.activateFree30') }}
             </button>
           </div>
 
@@ -288,7 +290,7 @@ async function copyReferralLink() {
                 </li>
               </ul>
               <div v-if="proProfile.plan === p.id" class="mt-4 w-full py-2 px-4 bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold rounded-xl text-center text-sm">
-                Plano Atual
+                {{ t('pro.currentPlanBadge') }}
               </div>
               <button
                 v-else-if="p.id !== 'gratuito'"
@@ -298,7 +300,7 @@ async function copyReferralLink() {
                 {{ p.cta }}
               </button>
               <div v-else class="mt-4 w-full py-2 px-4 bg-slate-950 text-slate-500 border border-slate-800 rounded-xl text-center text-sm">
-                Cancele pelo Portal para voltar ao Gratuito
+                {{ t('plans.ctaBackToFree') }}
               </div>
             </div>
           </div>
@@ -309,10 +311,10 @@ async function copyReferralLink() {
           <div>
             <h3 class="font-bold text-white flex items-center gap-2">
               <Share2 class="w-4 h-4 text-amber-400" />
-              Indique e ganhe dias de ouro
+              {{ t('pro.referTitle') }}
             </h3>
             <p class="text-xs text-slate-400 mt-1">
-              Compartilhe seu código: a cada indicado que concluir o 1º serviço, você ganha +30 dias de ouro e ele ganha +7 dias.
+              {{ t('pro.referDesc') }}
             </p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
@@ -324,7 +326,7 @@ async function copyReferralLink() {
               @click="copyReferralLink"
               class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold hover:bg-slate-700 transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
-              <Copy class="w-3.5 h-3.5" /> Copiar link
+              <Copy class="w-3.5 h-3.5" /> {{ t('pro.copyLink') }}
             </button>
             <a
               v-if="whatsappShareLink"
@@ -351,11 +353,11 @@ async function copyReferralLink() {
                     : 'bg-slate-800 text-slate-300 border-slate-700',
                 ]"
               >
-                {{ r.status === 'premiado' ? 'Premiado' : 'Cadastrado' }}
+                {{ r.status === 'premiado' ? t('pro.awarded') : t('pro.registered') }}
               </span>
             </div>
           </div>
-          <p v-else class="text-[11px] text-slate-500">Nenhuma indicação ainda. Compartilhe seu código!</p>
+          <p v-else class="text-[11px] text-slate-500">{{ t('pro.noReferrals') }}</p>
         </div>
       </div>
 </template>

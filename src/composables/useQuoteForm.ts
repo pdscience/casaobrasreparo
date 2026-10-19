@@ -8,6 +8,7 @@ import { useNavigation } from './useNavigation'
 import { useProfessionals } from './useProfessionals'
 import { useRequests } from './useRequests'
 import { pushToast } from './useUi'
+import { useI18n } from './useI18n'
 
 const selectedCategory = ref<string>('Eletricista')
 const clientName = ref<string>('')
@@ -81,8 +82,9 @@ function handlePhotoUpload(e: Event) {
 }
 
 async function handleAnalyzeWithAI() {
+  const { t, categoryText } = useI18n()
   if (!imagePreview.value) {
-    pushToast('warning', 'Por favor, tire ou selecione uma foto antes de solicitar a análise da IA.')
+    pushToast('warning', t('toasts.needPhoto'))
     return
   }
 
@@ -105,20 +107,21 @@ async function handleAnalyzeWithAI() {
     if (aiReadyToast.value) setTimeout(() => { aiReadyToast.value = false }, 6000)
   } catch (err) {
     console.error(err)
+    const cat = categoryText(selectedCategory.value)
     latestAiResult.value = {
-      summary: `Avaliação de Serviço: ${selectedCategory.value}`,
-      description: `Diagnóstico prévio para ${selectedCategory.value}. Requer inspeção técnica das instalações.`,
+      summary: t('ai.fallbackSummary', { category: cat }),
+      description: t('ai.fallbackDescription', { category: cat }),
       category: selectedCategory.value,
       complexity: 'Média',
-      estimatedTime: '1 a 2 horas',
-      materialsNeeded: ['Peças e insumos específicos de reposição', 'Insumos de fixação e isolamento'],
+      estimatedTime: t('ai.fallbackTime'),
+      materialsNeeded: [t('ai.fallbackMaterial1'), t('ai.fallbackMaterial2')],
       suggestedMinPrice: 0,
       suggestedMaxPrice: 0,
       technicalNotes: '',
-      recommendedAction: 'Custo Direto',
+      recommendedAction: t('ai.fallbackAction'),
     }
     aiFallback.value = true
-    pushToast('warning', 'A IA está indisponível no momento. Mostrando uma estimativa preliminar.')
+    pushToast('warning', t('toasts.aiUnavailable'))
   } finally {
     isAnalyzing.value = false
   }
@@ -128,6 +131,7 @@ async function handleConfirmOrder() {
   const { authUser, authRole, authView, authError, showAuth } = useAuth()
   const { goToTab } = useNavigation()
   const { requests } = useRequests()
+  const { t, categoryText } = useI18n()
   if (!latestAiResult.value || !sendMode.value) return
   formError.value = ''
 
@@ -140,18 +144,25 @@ async function handleConfirmOrder() {
     return
   }
 
-  const errors = validateQuoteForm({
-    clientName: clientName.value,
-    clientPhone: clientPhone.value,
-    clientAddress: clientAddress.value,
-  })
+  const errors = validateQuoteForm(
+    {
+      clientName: clientName.value,
+      clientPhone: clientPhone.value,
+      clientAddress: clientAddress.value,
+    },
+    {
+      clientName: t('validation.clientName'),
+      clientPhone: t('validation.clientPhone'),
+      clientAddress: t('validation.clientAddress'),
+    },
+  )
   if (Object.keys(errors).length > 0) {
-    formError.value = errors.clientName || errors.clientPhone || errors.clientAddress || 'Verifique os dados.'
+    formError.value = errors.clientName || errors.clientPhone || errors.clientAddress || t('toasts.verifyData')
     return
   }
 
   if (sendMode.value === 'direct' && !selectedProfessional.value) {
-    formError.value = 'Escolha um profissional para envio direto.'
+    formError.value = t('toasts.needProForDirect')
     return
   }
 
@@ -161,8 +172,8 @@ async function handleConfirmOrder() {
       photoUrl = await uploadServicePhoto(photoFile.value, authUser.value.id)
     } catch (err) {
       console.error('Erro ao enviar foto:', err)
-      pushToast('error', 'Não foi possível enviar a foto do serviço. Tente novamente.')
-      formError.value = 'Falha no envio da foto. Tente novamente.'
+      pushToast('error', t('toasts.photoUploadError'))
+      formError.value = t('toasts.photoFailed')
       return
     }
   }
@@ -186,7 +197,13 @@ async function handleConfirmOrder() {
 
     if (sendMode.value === 'direct' && selectedProfessional.value?.phone) {
       const pro = selectedProfessional.value
-      const msg = `Olá ${pro.name}! Vi seu perfil na Casa Obra e Reparos.\n\nPreciso de um serviço de *${selectedCategory.value}*.\n${latestAiResult.value!.description}\n\nPode me enviar uma proposta?`
+      const msg = [
+        t('ai.waIntro', { name: pro.name }),
+        '',
+        t('ai.waBody', { category: categoryText(selectedCategory.value), description: latestAiResult.value!.description }),
+        '',
+        t('ai.waAsk'),
+      ].join('\n')
       window.open(buildWhatsAppLink(pro.phone, msg), '_blank')
     }
 
@@ -194,7 +211,9 @@ async function handleConfirmOrder() {
     goToTab('meus_pedidos')
   } catch (err) {
     console.error('Erro ao criar pedido:', err)
-    formError.value = `Não foi possível enviar o pedido. ${err instanceof Error ? err.message : 'Erro de conexão com o servidor.'}`
+    formError.value = t('toasts.requestError', {
+      reason: err instanceof Error ? err.message : t('toasts.serverError'),
+    })
   }
 }
 

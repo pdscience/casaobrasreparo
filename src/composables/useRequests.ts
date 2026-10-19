@@ -6,6 +6,7 @@ import { useAuth } from './useAuth'
 import { usePlans } from './usePlans'
 import { useProfessionals } from './useProfessionals'
 import { useUi, pushToast } from './useUi'
+import { useI18n } from './useI18n'
 
 const requests = ref<ServiceRequest[]>([])
 const isLoading = ref(true)
@@ -94,7 +95,7 @@ async function handleSaveSchedule() {
     scheduleModal.value = null
   } catch (err) {
     console.error('Erro ao agendar:', err)
-    pushToast('error', 'Não foi possível agendar a visita. Tente novamente.')
+    pushToast('error', useI18n().t('toasts.scheduleError'))
   }
 }
 
@@ -116,7 +117,7 @@ async function handleUpdateStatus(orderId: string, newStatus: ServiceRequest['st
     await loadData()
   } catch (err) {
     console.error('Erro ao atualizar status:', err)
-    pushToast('error', 'Não foi possível atualizar o status do pedido. Tente novamente.')
+    pushToast('error', useI18n().t('toasts.statusError'))
   }
 }
 
@@ -138,7 +139,7 @@ async function handleSaveRating() {
     ratingComment.value = ''
   } catch (err) {
     console.error('Erro ao salvar avaliação:', err)
-    pushToast('error', 'Não foi possível salvar a avaliação. Tente novamente.')
+    pushToast('error', useI18n().t('toasts.ratingError'))
   }
 }
 

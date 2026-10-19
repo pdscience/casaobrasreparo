@@ -11,6 +11,7 @@ export interface MonthlySummary {
 export function computeMonthlySummary(
   requests: Array<{ status: string; final_price?: number | null; created_at: string }>,
   now: Date = new Date(),
+  locale: string = 'pt-BR',
 ): MonthlySummary {
   const month = now.getMonth()
   const year = now.getFullYear()
@@ -32,7 +33,7 @@ export function computeMonthlySummary(
   const completedCount = ofMonth.length
 
   return {
-    monthLabel: now.toLocaleDateString('pt-BR', { month: 'long' }),
+    monthLabel: now.toLocaleDateString(locale, { month: 'long' }),
     total,
     previousTotal,
     deltaPercent: previousTotal > 0 ? Math.round(((total - previousTotal) / previousTotal) * 1000) / 10 : null,

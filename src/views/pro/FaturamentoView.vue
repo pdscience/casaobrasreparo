@@ -4,9 +4,12 @@ import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
+import { useI18n } from '../../composables/useI18n'
 import { computeMonthlySummary } from '../../lib/revenue'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
 import { TrendingUp, BarChart2, Lock } from 'lucide-vue-next'
+
+const { t, lang } = useI18n()
 
 const { userMode } = useAuth()
 const { activeTab } = useNavigation()
@@ -23,10 +26,17 @@ function formatDecimal(n: number): string {
   return n.toFixed(1).replace('.', ',')
 }
 
-const summary = computed(() => computeMonthlySummary(requests.value, new Date()))
+const summary = computed(() => computeMonthlySummary(requests.value, new Date(), lang.value))
+
+// Abreviações dos meses no idioma atual
+const MONTH_ABBR: Record<string, string[]> = {
+  'pt-BR': ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+  en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  es: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+}
 
 const revenueChartData = computed(() => {
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const months = MONTH_ABBR[lang.value] ?? MONTH_ABBR['pt-BR']
   const now = new Date()
   const currentMonth = now.getMonth()
 
@@ -109,10 +119,10 @@ const revenueChartOption = computed(() => ({
         <div>
           <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <TrendingUp class="w-5 h-5 text-amber-400" />
-            Relatório Financeiro & Faturamento Mensal
+            {{ t('revenue.title') }}
           </h2>
           <p class="text-xs text-slate-400 mt-1">
-            Acompanhe o rendimento do seu trabalho, total faturado e quantidade de serviços prestados.
+            {{ t('revenue.desc') }}
           </p>
         </div>
 
@@ -120,7 +130,7 @@ const revenueChartOption = computed(() => ({
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-2">
             <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
-              Faturamento de {{ capitalize(summary.monthLabel) }}
+              {{ t('revenue.monthRevenue', { month: capitalize(summary.monthLabel) }) }}
             </span>
             <span class="text-2xl sm:text-3xl font-black text-amber-400">
               R$ {{ summary.total.toLocaleString('pt-BR') }},00
@@ -129,31 +139,31 @@ const revenueChartOption = computed(() => ({
               'text-[11px] font-medium flex items-center gap-1',
               summary.deltaPercent > 0 ? 'text-emerald-400' : summary.deltaPercent < 0 ? 'text-red-400' : 'text-slate-400'
             ]">
-              <TrendingUp class="w-3.5 h-3.5" /> {{ summary.deltaPercent > 0 ? '+' : '' }}{{ summary.deltaPercent }}% vs mês anterior
+              <TrendingUp class="w-3.5 h-3.5" /> {{ summary.deltaPercent > 0 ? '+' : '' }}{{ summary.deltaPercent }}% {{ t('revenue.vsLastMonth') }}
             </p>
           </div>
 
           <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-2">
             <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
-              Serviços Concluídos no Mês
+              {{ t('revenue.servicesDone') }}
             </span>
             <span class="text-2xl sm:text-3xl font-black text-white">
-              {{ summary.completedCount }} atendimentos
+              {{ t('revenue.servicesCount', { count: summary.completedCount }) }}
             </span>
             <p class="text-[11px] text-slate-400 font-medium">
-              Média de {{ formatDecimal(summary.completedCount / new Date().getDate()) }} serviços por dia
+              {{ t('revenue.avgPerDay', { value: formatDecimal(summary.completedCount / new Date().getDate()) }) }}
             </p>
           </div>
 
           <div class="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-2">
             <span class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">
-              Ticket Médio por Serviço
+              {{ t('revenue.avgTicket') }}
             </span>
             <span class="text-2xl sm:text-3xl font-black text-cyan-400">
               R$ {{ Math.round(summary.avgTicket) }},00
             </span>
             <p class="text-[11px] text-slate-400 font-medium">
-              Com base em serviços residenciais e prediais
+              {{ t('revenue.avgTicketDesc') }}
             </p>
           </div>
         </div>
@@ -163,9 +173,9 @@ const revenueChartOption = computed(() => ({
           <div class="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 class="font-bold text-white text-sm flex items-center gap-2">
               <BarChart2 class="w-4 h-4 text-amber-400" />
-              Evolução do Faturamento Mensal (Em Reais R$)
+              {{ t('revenue.chartTitle') }}
             </h3>
-            <span class="text-xs text-slate-400">Semestre Atual (2026)</span>
+            <span class="text-xs text-slate-400">{{ t('revenue.currentSemester', { year: new Date().getFullYear() }) }}</span>
           </div>
 
           <div class="h-64 w-full pt-4">
@@ -177,15 +187,15 @@ const revenueChartOption = computed(() => ({
           <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 mx-auto flex items-center justify-center">
             <Lock class="w-7 h-7" />
           </div>
-          <h2 class="text-xl font-bold text-white">Relatórios disponíveis no plano Ouro</h2>
+          <h2 class="text-xl font-bold text-white">{{ t('revenue.lockedTitle') }}</h2>
           <p class="text-sm text-slate-400 max-w-md mx-auto">
-            Acompanhe faturamento mensal, ticket médio e a evolução dos seus serviços com o plano Ouro.
+            {{ t('revenue.lockedDesc') }}
           </p>
           <button
             @click="subscribePlan('ouro')"
             class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-bold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all"
           >
-            Assinar Ouro
+            {{ t('revenue.subscribeOuro') }}
           </button>
         </div>
       </div>

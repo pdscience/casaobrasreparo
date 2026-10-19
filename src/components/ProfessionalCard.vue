@@ -4,6 +4,7 @@ import type { Professional, Plan } from '../types'
 import { Star, MessageCircle, X, MapPin, FileText, User, Wrench } from 'lucide-vue-next'
 import { buildWhatsAppLink } from '../lib/whatsapp'
 import { useAuth } from '../composables/useAuth'
+import { useI18n } from '../composables/useI18n'
 
 const props = defineProps<{
   professional: Professional
@@ -31,6 +32,7 @@ const extraCategories = computed(() => {
 })
 
 const { authUser } = useAuth()
+const { t, categoryText, planText } = useI18n()
 
 </script>
 
@@ -65,13 +67,13 @@ const { authUser } = useAuth()
             :class="[planInfo?.badge_bg, planInfo?.badge_text, planInfo?.badge_border]"
             class="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0"
           >
-            {{ professional.plan }}
+            {{ planText(professional.plan) }}
           </span>
         </div>
         <div class="mt-3 flex items-center gap-2 min-w-0">
           <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
             <Wrench class="w-3 h-3 shrink-0" />
-            <span class="truncate">{{ extraCategories > 0 ? `${primaryCategory} +${extraCategories}` : primaryCategory }}</span>
+            <span class="truncate">{{ extraCategories > 0 ? `${categoryText(primaryCategory)} +${extraCategories}` : categoryText(primaryCategory) }}</span>
           </p>
           <p v-if="cityLine" class="flex items-center gap-1 text-[13px] text-slate-100 truncate min-w-0">
             <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
@@ -91,13 +93,13 @@ const { authUser } = useAuth()
       <div class="flex items-start gap-2">
         <FileText class="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
         <p class="text-[13px] text-slate-100 leading-relaxed line-clamp-3">
-          {{ professional.bio?.trim() || 'Profissional sem descrição ainda.' }}
+          {{ professional.bio?.trim() || t('card.noDescription') }}
         </p>
       </div>
       <div class="flex items-start gap-2 bg-slate-950/60 border border-slate-800 rounded-xl p-3">
         <MapPin class="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
         <div class="min-w-0">
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bairros atendidos</p>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{{ t('card.neighborhoodsServed') }}</p>
           <div v-if="professional.coverage_bairros?.length" class="flex flex-wrap gap-1 mt-1.5">
             <span
               v-for="bairro in professional.coverage_bairros"
@@ -107,7 +109,7 @@ const { authUser } = useAuth()
               {{ bairro }}
             </span>
           </div>
-          <p v-else class="text-[11px] text-slate-400 mt-0.5">Atende toda a região</p>
+          <p v-else class="text-[11px] text-slate-400 mt-0.5">{{ t('card.wholeRegion') }}</p>
         </div>
       </div>
       <div v-if="professional.portfolio_photos?.length" class="flex gap-2 mt-2">
@@ -115,7 +117,7 @@ const { authUser } = useAuth()
           v-for="(url, i) in professional.portfolio_photos.slice(0, 3)"
           :key="i"
           :src="url"
-          alt="Foto do trabalho"
+          :alt="t('card.workPhoto')"
           class="w-16 h-16 rounded-xl object-cover border border-slate-800"
         />
       </div>
@@ -140,17 +142,17 @@ const { authUser } = useAuth()
         @click="emit('choose', professional)"
         class="flex-1 px-3 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25"
       >
-        Escolher e solicitar
+        {{ t('card.chooseAndRequest') }}
       </button>
       <button
         v-if="selectable && selected"
         type="button"
         @click="emit('clear')"
-        title="Cancelar seleção"
+        :title="t('card.cancelSelection')"
         class="flex-1 px-3 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 bg-red-500/15 text-red-300 border border-red-500/40 hover:bg-red-500/25"
       >
         <X class="w-3.5 h-3.5" />
-        Cancelar
+        {{ t('common.cancel') }}
       </button>
     </div>
   </div>

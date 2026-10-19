@@ -5,8 +5,11 @@ import { useProfessionals } from '../../composables/useProfessionals'
 import { useQuoteForm } from '../../composables/useQuoteForm'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
+import { useI18n } from '../../composables/useI18n'
 import ProfessionalCard from '../../components/ProfessionalCard.vue'
 import { HardHat } from 'lucide-vue-next'
+
+const { t, categoryText } = useI18n()
 
 const { activeTab, scrollToId, trackCta, goToTab } = useNavigation()
 const {
@@ -41,53 +44,53 @@ function handleLandingCategory(categoryName: string) {
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <span class="inline-flex w-fit items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
-          <HardHat class="w-4 h-4" /> Profissionais
+          <HardHat class="w-4 h-4" /> {{ t('nav.profissionais') }}
         </span>
-        <h1 class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-3">Encontre por profissão</h1>
+        <h1 class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-3">{{ t('directory.findByProfession') }}</h1>
         <p class="text-xs text-slate-400 mt-1">
-          {{ filterCategory === 'Todas' ? 'Escolha uma profissão para filtrar' : `Mostrando: ${filterCategory}` }}
-          · {{ filteredProfessionals.length }} encontrado(s)
+          {{ filterCategory === 'Todas' ? t('directory.chooseProfession') : `${t('directory.showing')}: ${categoryText(filterCategory)}` }}
+          · {{ filteredProfessionals.length }} {{ t('directory.found') }}
         </p>
       </div>
-      <button @click="scrollToId('inicio')" class="text-xs font-bold text-slate-300 hover:text-white border border-slate-700 rounded-full px-4 py-2 whitespace-nowrap">Voltar ao início</button>
+      <button @click="scrollToId('inicio')" class="text-xs font-bold text-slate-300 hover:text-white border border-slate-700 rounded-full px-4 py-2 whitespace-nowrap">{{ t('directory.backToStart') }}</button>
     </div>
     <!-- FILTROS (PROFISSÃO / UF / CIDADE / BAIRRO) -->
     <div class="flex flex-wrap items-center gap-2">
       <select
         :value="filterCategory"
-        aria-label="Filtrar por profissão"
+        :aria-label="t('directory.filterByProfession')"
         class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
         @change="handleLandingCategory(($event.target as HTMLSelectElement).value)"
       >
         <option v-for="cat in ['Todas', ...CATEGORIES.map(c => c.name)]" :key="'pub-cat-' + cat" :value="cat">
-          {{ cat === 'Todas' ? 'Todas as profissões' : cat }}
+          {{ cat === 'Todas' ? t('directory.allProfessions') : categoryText(cat) }}
         </option>
       </select>
       <select
         v-model="filterUf"
-        aria-label="Filtrar por UF"
+        :aria-label="t('directory.filterByUf')"
         class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
       >
         <option v-for="u in availableUfs" :key="'pub-uf-' + u" :value="u">
-          {{ u === 'Todas' ? 'Todas as UFs' : u }}
+          {{ u === 'Todas' ? t('directory.allUfs') : u }}
         </option>
       </select>
       <select
         v-model="filterCidade"
-        aria-label="Filtrar por cidade"
+        :aria-label="t('directory.filterByCity')"
         class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
       >
         <option v-for="c in availableCidades" :key="'pub-cidade-' + c" :value="c">
-          {{ c === 'Todas' ? 'Todas as cidades' : c }}
+          {{ c === 'Todas' ? t('directory.allCities') : c }}
         </option>
       </select>
       <select
         v-model="filterBairro"
-        aria-label="Filtrar por bairro"
+        :aria-label="t('directory.filterByNeighborhood')"
         class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-3.5 py-2 focus:outline-none focus:border-amber-500/50 hover:border-slate-600 transition-all"
       >
         <option v-for="b in availableBairros" :key="'pub-bairro-' + b" :value="b">
-          {{ b === 'Todos' ? 'Todos os bairros' : b }}
+          {{ b === 'Todos' ? t('directory.allNeighborhoods') : b }}
         </option>
       </select>
       <button
@@ -96,14 +99,14 @@ function handleLandingCategory(categoryName: string) {
         @click="resetDirectoryFilters"
         class="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
       >
-        Limpar filtros
+        {{ t('directory.clearFilters') }}
       </button>
     </div>
 
-    <div v-if="isLoading" class="text-center text-xs text-slate-400 py-8">Carregando profissionais...</div>
+    <div v-if="isLoading" class="text-center text-xs text-slate-400 py-8">{{ t('directory.loading') }}</div>
     <div v-else-if="paginatedProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
-      <p class="text-sm text-slate-300 font-bold">Nenhum profissional nesta categoria ainda.</p>
-      <p class="text-xs text-slate-400 mt-1">Tente outra profissão ou envie para todos após a análise da IA.</p>
+      <p class="text-sm text-slate-300 font-bold">{{ t('directory.emptyTitle') }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ t('directory.emptyDesc') }}</p>
     </div>
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       <ProfessionalCard
@@ -118,7 +121,7 @@ function handleLandingCategory(categoryName: string) {
       />
     </div>
     <p v-if="selectedProfessional" class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5">
-      Selecionado: <strong>{{ selectedProfessional.name }}</strong> ({{ selectedProfessional.category }}) — faça login/cadastro para preencher a solicitação.
+      {{ t('directory.selected') }}: <strong>{{ selectedProfessional.name }}</strong> ({{ categoryText(selectedProfessional.category) }}) — {{ t('directory.loginToContinue') }}
     </p>
   </div>
 </template>

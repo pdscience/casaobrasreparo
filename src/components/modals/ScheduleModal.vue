@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useUi } from '../../composables/useUi'
 import { useRequests } from '../../composables/useRequests'
+import { useI18n } from '../../composables/useI18n'
 import { Calendar, X } from 'lucide-vue-next'
 
 const { scheduleModal, scheduleDate, scheduleTime, schedulePrice, scheduleObs } = useUi()
 const { handleSaveSchedule } = useRequests()
+const { t } = useI18n()
 </script>
 
 <template>
@@ -14,7 +16,7 @@ const { handleSaveSchedule } = useRequests()
     <div class="flex items-center justify-between border-b border-slate-800 pb-3">
       <h3 class="font-bold text-white text-sm flex items-center gap-2">
         <Calendar class="w-4 h-4 text-amber-400" />
-        Agendar Visita / Definir Preço
+        {{ t('modals.scheduleTitle') }}
       </h3>
       <button @click="scheduleModal = null" class="text-slate-400 hover:text-white">
         <X class="w-5 h-5" />
@@ -23,11 +25,11 @@ const { handleSaveSchedule } = useRequests()
 
     <div class="space-y-3 text-xs">
       <p class="text-slate-300">
-        Defina o dia, horário e valor acordado para o atendimento de <strong>{{ scheduleModal.client_name }}</strong>.
+        {{ t('modals.scheduleDesc', { name: scheduleModal.client_name }) }}
       </p>
 
       <div>
-        <label class="text-slate-400 font-medium">Data da Visita:</label>
+        <label class="text-slate-400 font-medium">{{ t('modals.visitDate') }}</label>
         <input
           type="date"
           v-model="scheduleDate"
@@ -36,7 +38,7 @@ const { handleSaveSchedule } = useRequests()
       </div>
 
       <div>
-        <label class="text-slate-400 font-medium">Horário Estimado:</label>
+        <label class="text-slate-400 font-medium">{{ t('modals.estimatedTime') }}</label>
         <input
           type="time"
           v-model="scheduleTime"
@@ -45,7 +47,7 @@ const { handleSaveSchedule } = useRequests()
       </div>
 
       <div>
-        <label class="text-slate-400 font-medium">Valor do Serviço / Visita (R$):</label>
+        <label class="text-slate-400 font-medium">{{ t('modals.serviceValue') }}</label>
         <input
           type="number"
           v-model="schedulePrice"
@@ -55,12 +57,12 @@ const { handleSaveSchedule } = useRequests()
       </div>
 
       <div>
-        <label class="text-slate-400 font-medium">Observação para o Cliente:</label>
+        <label class="text-slate-400 font-medium">{{ t('modals.clientNote') }}</label>
         <input
           type="text"
           v-model="scheduleObs"
           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white mt-1 focus:outline-none focus:border-amber-500"
-          placeholder="Ex: Trazer escada alta e disjuntor de fiação"
+          :placeholder="t('modals.clientNotePlaceholder')"
         />
       </div>
     </div>
@@ -70,13 +72,13 @@ const { handleSaveSchedule } = useRequests()
         @click="handleSaveSchedule"
         class="flex-1 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20"
       >
-        Confirmar Agendamento
+        {{ t('modals.confirmSchedule') }}
       </button>
       <button
         @click="scheduleModal = null"
         class="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
       >
-        Cancelar
+        {{ t('modals.cancel') }}
       </button>
     </div>
   </div>

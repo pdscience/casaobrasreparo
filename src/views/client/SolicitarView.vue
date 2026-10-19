@@ -6,6 +6,7 @@ import { useNavigation } from '../../composables/useNavigation'
 import { useProfessionals } from '../../composables/useProfessionals'
 import { usePlans } from '../../composables/usePlans'
 import { useQuoteForm } from '../../composables/useQuoteForm'
+import { useI18n } from '../../composables/useI18n'
 import ClientSubTabs from '../../components/layout/ClientSubTabs.vue'
 import ProfessionalCard from '../../components/ProfessionalCard.vue'
 import {
@@ -26,6 +27,7 @@ import {
 } from 'lucide-vue-next'
 
 const { userMode } = useAuth()
+const { t, categoryText, complexityText, planText } = useI18n()
 const { activeTab, goToTab } = useNavigation()
 const {
   findProfessional,
@@ -61,10 +63,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
             </div>
             <div>
               <h3 class="font-bold text-white text-base">
-                Solicitação #{{ createdOrderSuccess.id }} enviada com sucesso!
+                {{ t('client.requestSent', { id: createdOrderSuccess.id }) }}
               </h3>
               <p class="text-xs text-slate-300 mt-1">
-                O prestador <strong class="text-amber-400">{{ findProfessional(createdOrderSuccess.professional_id)?.name || 'Prestador' }}</strong> foi notificado para confirmação do agendamento ou envio da proposta.
+                {{ t('client.proNotified', { name: findProfessional(createdOrderSuccess.professional_id)?.name || t('common.prestador') }) }}
               </p>
             </div>
           </div>
@@ -73,14 +75,14 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               @click="goToTab('meus_pedidos'); createdOrderSuccess = null"
               class="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-2"
             >
-              Acompanhar Pedido
+              {{ t('client.trackRequest') }}
               <ArrowRight class="w-4 h-4" />
             </button>
             <button
               @click="createdOrderSuccess = null"
               class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
             >
-              Fechar
+              {{ t('common.close') }}
             </button>
           </div>
         </div>
@@ -90,13 +92,13 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
           <div class="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl -z-0 pointer-events-none" />
           <div class="relative z-10 space-y-3">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
-              <Sparkles class="w-3.5 h-3.5" /> Orçamento Técnico por Inteligência Artificial
+              <Sparkles class="w-3.5 h-3.5" /> {{ t('client.aiTechnicalQuote') }}
             </div>
             <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Tire uma foto do problema e receba um orçamento instantâneo
+              {{ t('client.aiTitle') }}
             </h2>
             <p class="text-sm text-slate-300 max-w-2xl leading-relaxed">
-              A nossa IA analisa o estado do equipamento, identifica peças necessárias, calcula a média de preço praticada no mercado brasileiro e conecta você ao prestador especializado.
+              {{ t('client.aiDesc') }}
             </p>
           </div>
         </div>
@@ -107,11 +109,11 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
             <div>
               <h3 class="text-base font-bold text-white flex items-center gap-2">
                 <Building2 class="w-4 h-4 text-amber-400" />
-                Profissionais disponíveis — clique em Escolher para preencher a solicitação
+                {{ t('client.availableProfessionals') }}
               </h3>
               <p class="text-[10px] text-slate-400 mt-0.5">
-                {{ filteredProfessionals.length }} profissional(is) encontrado(s)
-                <span v-if="selectedProfessional" class="text-amber-300">· Selecionado: {{ selectedProfessional.name }}</span>
+                {{ filteredProfessionals.length }} {{ t('client.foundCount') }}
+                <span v-if="selectedProfessional" class="text-amber-300">· {{ t('client.selectedLabel') }}: {{ selectedProfessional.name }}</span>
               </p>
             </div>
           </div>
@@ -123,24 +125,24 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
             >
               <option v-for="cat in availableCategories" :key="cat" :value="cat">
-                {{ cat === 'Todas' ? '📋 Todas as categorias' : cat }}
+                {{ cat === 'Todas' ? '📋 ' + t('directory.allCategories') : categoryText(cat) }}
               </option>
             </select>
             <select
               v-model="filterPlan"
               class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
             >
-              <option value="Todos">🏷️ Todos os planos</option>
-              <option value="ouro">⭐ Ouro</option>
-              <option value="prata">🔒 Prata</option>
-              <option value="bronze">🛡️ Bronze</option>
+              <option value="Todos">🏷️ {{ t('common.allPlans') }}</option>
+              <option value="ouro">⭐ {{ planText('ouro') }}</option>
+              <option value="prata">🔒 {{ planText('prata') }}</option>
+              <option value="bronze">🛡️ {{ planText('bronze') }}</option>
             </select>
             <select
               v-model="filterUf"
               class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
             >
               <option v-for="u in availableUfs" :key="'uf-' + u" :value="u">
-                {{ u === 'Todas' ? '📍 Todas as UFs' : u }}
+                {{ u === 'Todas' ? '📍 ' + t('directory.allUfs') : u }}
               </option>
             </select>
             <select
@@ -148,7 +150,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
             >
               <option v-for="c in availableCidades" :key="'cidade-' + c" :value="c">
-                {{ c === 'Todas' ? '🏙️ Todas as cidades' : c }}
+                {{ c === 'Todas' ? '🏙️ ' + t('directory.allCities') : c }}
               </option>
             </select>
             <select
@@ -156,7 +158,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
             >
               <option v-for="b in availableBairros" :key="'bairro-' + b" :value="b">
-                {{ b === 'Todos' ? '🏘️ Todos os bairros' : b }}
+                {{ b === 'Todos' ? '🏘️ ' + t('directory.allNeighborhoods') : b }}
               </option>
             </select>
             <button
@@ -165,7 +167,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               @click="resetDirectoryFilters"
               class="px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
             >
-              Limpar filtros
+              {{ t('directory.clearFilters') }}
             </button>
           </div>
 
@@ -184,7 +186,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
           </div>
 
           <div v-if="filteredProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
-            <p class="text-sm text-slate-400">Nenhum profissional encontrado com os filtros selecionados.</p>
+            <p class="text-sm text-slate-400">{{ t('client.noProfessionals') }}</p>
           </div>
 
           <!-- PAGINATION -->
@@ -200,10 +202,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               ]"
             >
-              ← Anterior
+              ← {{ t('common.prev') }}
             </button>
             <span class="text-[10px] text-slate-400">
-              Página {{ directoryPage }} de {{ totalPages }}
+              {{ t('common.page') }} {{ directoryPage }} {{ t('common.of') }} {{ totalPages }}
             </span>
             <button
               type="button"
@@ -216,14 +218,14 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               ]"
             >
-              Próxima →
+              {{ t('common.next') }} →
             </button>
           </div>
         </div>
 
         <div v-if="selectedProfessional" class="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-          <p class="text-xs text-amber-200">Solicitando para <strong>{{ selectedProfessional.name }}</strong> ({{ selectedProfessional.category }})</p>
-          <button type="button" @click="clearProfessionalSelection" class="text-[11px] text-slate-300 hover:text-white underline">Trocar / cancelar</button>
+          <p class="text-xs text-amber-200">{{ t('client.requestingFor') }} <strong>{{ selectedProfessional.name }}</strong> ({{ categoryText(selectedProfessional.category) }})</p>
+          <button type="button" @click="clearProfessionalSelection" class="text-[11px] text-slate-300 hover:text-white underline">{{ t('client.switchCancel') }}</button>
         </div>
 
         <div id="solicitar-form" class="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-24">
@@ -231,7 +233,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
           <div class="lg:col-span-7 bg-slate-900 rounded-2xl p-6 border border-slate-800 space-y-5">
             <h3 class="text-base font-bold text-white flex items-center gap-2">
               <Camera class="w-5 h-5 text-amber-400" />
-              1. Foto do Equipamento ou Danos
+              {{ t('client.photoStep') }}
             </h3>
 
             <!-- UPLOAD ZONE -->
@@ -251,13 +253,13 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                     @click="fileInputRef?.click()"
                     class="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-medium hover:bg-slate-700 flex items-center gap-1.5"
                   >
-                    <RefreshCw class="w-4 h-4" /> Trocar Foto
+                    <RefreshCw class="w-4 h-4" /> {{ t('client.trocarFoto') }}
                   </button>
                   <button
                     @click="imagePreview = null; photoFile = null"
                     class="px-4 py-2 rounded-xl bg-rose-500/20 text-rose-300 text-xs font-medium hover:bg-rose-500/30 border border-rose-500/30 flex items-center gap-1.5"
                   >
-                    <X class="w-4 h-4" /> Remover
+                    <X class="w-4 h-4" /> {{ t('client.remover') }}
                   </button>
                 </div>
               </div>
@@ -271,10 +273,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   <Upload class="w-7 h-7" />
                 </div>
                 <p class="text-sm font-semibold text-slate-200">
-                  Clique para carregar uma foto ou tirar da câmera
+                  {{ t('client.uploadHint') }}
                 </p>
                 <p class="text-xs text-slate-400 mt-1">
-                  Suporta arquivos PNG, JPG ou JPEG (Máx. 10MB)
+                  {{ t('client.uploadFormats') }}
                 </p>
               </div>
             </div>
@@ -282,24 +284,24 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
             <!-- CATEGORY SELECTOR -->
             <div class="space-y-2 pt-2">
               <label class="text-xs font-semibold text-slate-300">
-                2. Categoria do Serviço Requerido:
+                {{ t('client.categoryStep') }}
               </label>
               <select
                 v-model="selectedCategory"
                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white text-xs focus:outline-none focus:border-amber-500 transition-all"
               >
-                <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option>
+                <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ categoryText(cat.name) }}</option>
               </select>
             </div>
 
             <!-- CLIENT DETAILS FORM -->
             <div class="space-y-3 pt-2 border-t border-slate-800">
               <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                3. Seus Dados de Contato e Endereço: <span class="text-amber-400 normal-case">* obrigatórios ao confirmar</span>
+                {{ t('client.dataStep') }} <span class="text-amber-400 normal-case">{{ t('client.dataStepHint') }}</span>
               </h4>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="text-[11px] text-slate-400 font-medium">Seu Nome Completo: *</label>
+                  <label class="text-[11px] text-slate-400 font-medium">{{ t('client.fullName') }} *</label>
                   <input
                     type="text"
                     v-model="clientName"
@@ -308,7 +310,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   />
                 </div>
                 <div>
-                  <label class="text-[11px] text-slate-400 font-medium">WhatsApp para Notificação: *</label>
+                  <label class="text-[11px] text-slate-400 font-medium">{{ t('client.phoneNotify') }} *</label>
                   <input
                     type="text"
                     v-model="clientPhone"
@@ -318,7 +320,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                 </div>
               </div>
               <div>
-                <label class="text-[11px] text-slate-400 font-medium">Endereço do Atendimento: *</label>
+                <label class="text-[11px] text-slate-400 font-medium">{{ t('client.serviceAddress') }} *</label>
                 <input
                   type="text"
                   v-model="clientAddress"
@@ -327,12 +329,12 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                 />
               </div>
               <div>
-                <label class="text-[11px] text-slate-400 font-medium">Observação/Detalhe adicional:</label>
+                <label class="text-[11px] text-slate-400 font-medium">{{ t('client.extraNote') }}</label>
                 <textarea
                   v-model="notes"
                   rows="2"
                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 mt-1 resize-none"
-                  placeholder="Descreva brevemente o que aconteceu ou restrições de horário..."
+                  :placeholder="t('client.notePlaceholder')"
                 />
               </div>
             </div>
@@ -346,11 +348,11 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
             >
               <template v-if="isAnalyzing">
                 <RefreshCw class="w-5 h-5 animate-spin" />
-                Analisando Imagem com IA Gemini...
+                {{ t('client.analyzingImage') }}
               </template>
               <template v-else>
                 <Bot class="w-5 h-5" />
-                Analisar Foto com IA e Gerar Orçamento
+                {{ t('client.analyzeAndQuote') }}
               </template>
             </button>
           </div>
@@ -362,10 +364,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                 <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                   <h3 class="font-bold text-white text-base flex items-center gap-2">
                     <Sparkles class="w-5 h-5 text-amber-400" />
-                    Resultado do Diagnóstico por IA
+                    {{ t('client.aiResultTitle') }}
                   </h3>
                   <span v-if="latestAiResult" class="text-[10px] bg-amber-500/10 text-amber-400 font-bold px-2.5 py-1 rounded-full border border-amber-500/20">
-                    Pronto
+                    {{ t('client.ready') }}
                   </span>
                 </div>
 
@@ -374,7 +376,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                     <Bot class="w-6 h-6" />
                   </div>
                   <p class="text-xs max-w-xs mx-auto leading-relaxed">
-                    Selecione ou tire uma foto e clique no botão para gerar o orçamento técnico instantâneo por IA.
+                    {{ t('client.emptyResult') }}
                   </p>
                 </div>
 
@@ -384,10 +386,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   </div>
                   <div class="space-y-1">
                     <p class="text-xs font-bold text-amber-400">
-                      Processando imagem com Visão Computacional...
+                      {{ t('client.processing') }}
                     </p>
                     <p class="text-[11px] text-slate-400">
-                      Calculando horas estimadas, materiais e média de mercado.
+                      {{ t('client.processingSub') }}
                     </p>
                   </div>
                 </div>
@@ -395,20 +397,20 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                 <div v-if="latestAiResult && !isAnalyzing" class="space-y-4 text-xs animate-in fade-in duration-200">
                   <div v-if="latestAiResult.suggestedMinPrice === 0 && latestAiResult.suggestedMaxPrice === 0" class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-2">
                     <Bot class="w-4 h-4 text-blue-400 shrink-0" />
-                    <p class="text-[11px] text-blue-300">Análise preliminar por categoria. O profissional confirma os valores exatos no WhatsApp.</p>
+                    <p class="text-[11px] text-blue-300">{{ t('client.preliminary') }}</p>
                   </div>
                   <div v-if="aiReadyToast" class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center gap-2">
                     <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
-                    <p class="text-[11px] text-emerald-300">Análise da IA concluída com valores e materiais.</p>
+                    <p class="text-[11px] text-emerald-300">{{ t('client.aiDone') }}</p>
                   </div>
                   <!-- SUMMARY HEADER -->
                   <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
                     <div class="flex items-center justify-between">
                       <span class="text-[10px] uppercase font-bold text-slate-400">
-                        Problema Identificado:
+                        {{ t('client.problemFound') }}
                       </span>
                       <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                        Complexidade {{ latestAiResult.complexity }}
+                        {{ t('client.complexity') }} {{ complexityText(latestAiResult.complexity) }}
                       </span>
                     </div>
                     <h4 class="text-sm font-bold text-white">
@@ -423,20 +425,20 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center justify-between">
                     <div>
                       <span class="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
-                        Estimativa do Serviço
+                        {{ t('client.serviceEstimate') }}
                       </span>
                       <span v-if="latestAiResult.suggestedMinPrice > 0 || latestAiResult.suggestedMaxPrice > 0" class="text-xl font-extrabold text-white">
                         R$ {{ latestAiResult.suggestedMinPrice }},00 ~ R$ {{ latestAiResult.suggestedMaxPrice }},00
                       </span>
                       <span v-else class="text-base font-extrabold text-white">
-                        O profissional fornecerá o valor.
+                        {{ t('client.proWillProvide') }}
                       </span>
                       <span v-if="latestAiResult.suggestedMinPrice === 0 && latestAiResult.suggestedMaxPrice === 0" class="block text-[10px] text-slate-400 mt-0.5">
-                        A previsão não pôde ser avaliada pela IA.
+                        {{ t('client.forecastUnavailable') }}
                       </span>
                     </div>
                     <div class="text-right">
-                      <span class="text-[10px] text-slate-400 block">Tempo Est.</span>
+                      <span class="text-[10px] text-slate-400 block">{{ t('client.estTime') }}</span>
                       <span class="text-xs font-bold text-slate-200">
                         {{ latestAiResult.estimatedTime }}
                       </span>
@@ -447,12 +449,12 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   <div v-if="aiFallback && latestAiResult"
                     class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200 flex items-start gap-2">
                     <AlertTriangle :size="14" class="mt-0.5 shrink-0" />
-                    <span>IA indisponível — análise preliminar. Os valores sugeridos podem não refletir a realidade; confirme com o profissional.</span>
+                    <span>{{ t('client.aiUnavailable') }}</span>
                   </div>
                   <div class="space-y-1.5">
                     <span class="font-bold text-slate-300 text-[11px] flex items-center gap-1">
                       <CheckCircle2 class="w-3.5 h-3.5 text-amber-400" />
-                      Insumos & Peças Prováveis:
+                      {{ t('client.materials') }}
                     </span>
                     <div class="flex flex-wrap gap-1.5">
                       <span
@@ -468,7 +470,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   <!-- TECHNICAL RECOMMENDATION -->
                   <div v-if="latestAiResult.technicalNotes" class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-[11px] text-slate-300 space-y-1">
                     <span class="font-bold text-amber-400 block">
-                      Orientação Técnica:
+                      {{ t('client.techNotes') }}
                     </span>
                     <p>{{ latestAiResult.technicalNotes }}</p>
                   </div>
@@ -476,7 +478,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   <!-- SEND MODE CHOICE -->
                   <div v-if="!sendMode" class="space-y-2 pt-2">
                     <span class="font-bold text-amber-400 text-[11px] block">
-                      Como deseja enviar seu orçamento?
+                      {{ t('client.howToSend') }}
                     </span>
                     <button
                       v-if="selectedProfessional"
@@ -488,9 +490,9 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                         <Check class="w-5 h-5" />
                       </div>
                       <div>
-                        <p class="font-bold text-white text-xs">Enviar para {{ selectedProfessional.name }}</p>
+                        <p class="font-bold text-white text-xs">{{ t('client.sendToPro') }} {{ selectedProfessional.name }}</p>
                         <p class="text-[10px] text-slate-400 mt-0.5">
-                          {{ selectedProfessional.category }} · contato direto via WhatsApp após salvar o pedido.
+                          {{ categoryText(selectedProfessional.category) }} · {{ t('client.directContact') }}
                         </p>
                       </div>
                     </button>
@@ -503,10 +505,9 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                         <Users class="w-5 h-5" />
                       </div>
                       <div>
-                        <p class="font-bold text-white text-xs">Enviar para todos os profissionais</p>
+                        <p class="font-bold text-white text-xs">{{ t('client.sendToAll') }}</p>
                         <p class="text-[10px] text-slate-400 mt-0.5">
-                          Seu orçamento será enviado para <strong class="text-cyan-400">{{ prataBronzeCount }} profissionais</strong> prata e bronze da categoria.
-                          Eles enviarão suas propostas.
+                          {{ t('client.broadcastDesc', { count: prataBronzeCount }) }}
                         </p>
                       </div>
                     </button>
@@ -520,9 +521,9 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                         <Sparkles class="w-5 h-5" />
                       </div>
                       <div>
-                        <p class="font-bold text-white text-xs">Escolher um profissional específico</p>
+                        <p class="font-bold text-white text-xs">{{ t('client.chooseSpecific') }}</p>
                         <p class="text-[10px] text-slate-400 mt-0.5">
-                          Selecione abaixo um profissional de {{ selectedCategory }} para contato direto via WhatsApp.
+                          {{ t('client.chooseBelow', { category: categoryText(selectedCategory) }) }}
                         </p>
                       </div>
                     </button>
@@ -532,7 +533,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                   <div v-if="sendMode === 'broadcast'" class="space-y-2">
                     <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3 text-center">
                       <p class="text-[10px] text-cyan-400 font-bold">
-                        Enviando para {{ prataBronzeCount }} profissionais prata e bronze
+                        {{ t('client.sendingTo', { count: prataBronzeCount }) }}
                       </p>
                     </div>
                     <button
@@ -540,7 +541,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                       @click="sendMode = null"
                       class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
                     >
-                      ← Voltar e escolher outra opção
+                      {{ t('client.backChoose') }}
                     </button>
                   </div>
 
@@ -551,10 +552,10 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                       @click="clearProfessionalSelection"
                       class="text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
                     >
-                      ← Voltar e escolher outra opção
+                      {{ t('client.backChoose') }}
                     </button>
                     <span class="font-bold text-amber-400 text-[11px] block">
-                      Selecione o profissional ({{ selectedCategory }}):
+                      {{ t('client.selectPro', { category: categoryText(selectedCategory) }) }}
                     </span>
                     <div
                       v-for="pro in directCandidates"
@@ -574,7 +575,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                         </div>
                         <div>
                           <p class="font-bold text-white text-xs">{{ pro.name }}</p>
-                          <p class="text-[10px] text-slate-400">{{ pro.category }} · {{ PLAN_LABELS[pro.plan] ?? pro.plan }}</p>
+                          <p class="text-[10px] text-slate-400">{{ categoryText(pro.category) }} · {{ PLAN_LABELS[pro.plan] ?? pro.plan }}</p>
                         </div>
                       </div>
                       <div class="text-right">
@@ -608,13 +609,13 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                 >
                   <Check class="w-4 h-4" />
                   <template v-if="sendMode === 'broadcast'">
-                    Enviar para {{ prataBronzeCount }} profissionais
+                    {{ t('client.sendToN', { count: prataBronzeCount }) }}
                   </template>
                   <template v-else-if="sendMode === 'direct' && selectedProfessional">
-                    Enviar para {{ selectedProfessional.name }}
+                    {{ t('client.sendToPro') }} {{ selectedProfessional.name }}
                   </template>
                   <template v-else>
-                    Selecione um profissional
+                    {{ t('client.selectAPro') }}
                   </template>
                 </button>
               </div>

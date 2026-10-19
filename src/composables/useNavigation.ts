@@ -1,6 +1,7 @@
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed } from 'vue'
 import { trackEvent } from '../lib/analytics'
 import { useAuth } from './useAuth'
+import { useI18n } from './useI18n'
 
 export type TabId = 'boas_vindas' | 'profissionais' | 'solicitar' | 'meus_pedidos' | 'recibos_cliente'
   | 'historico_cliente' | 'pedidos_pro' | 'faturamento' | 'perfil_pro' | 'historico_pro'
@@ -8,12 +9,16 @@ export type TabId = 'boas_vindas' | 'profissionais' | 'solicitar' | 'meus_pedido
 const activeTab = ref<TabId>('boas_vindas')
 const isScrolled = ref(false)
 const activeSection = ref('inicio')
-const teslaSections = [
-  { id: 'inicio', label: 'Início' },
-  { id: 'servicos-eletrica', label: 'Elétrica & Hidráulica' },
-  { id: 'servicos-reforma', label: 'Pintura & Reformas' },
-  { id: 'contato', label: 'Contato' },
-]
+// Rótulos traduzidos: depends on the reactive language, so it is a computed.
+const teslaSections = computed(() => {
+  const { t } = useI18n()
+  return [
+    { id: 'inicio', label: t('nav.inicio') },
+    { id: 'servicos-eletrica', label: t('nav.eletrica') },
+    { id: 'servicos-reforma', label: t('nav.pintura') },
+    { id: 'contato', label: t('nav.contato') },
+  ]
+})
 
 // Mapa único tab ↔ path (consumido pelo router na Task 8)
 const TAB_PATHS: Record<TabId, string> = {
@@ -64,7 +69,7 @@ export function onPageScroll(): void {
   isScrolled.value = window.scrollY > 24
   // dots: acha seção mais visível
   let current = 'inicio'
-  for (const s of teslaSections) {
+  for (const s of teslaSections.value) {
     const el = document.getElementById(s.id)
     if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.45) current = s.id
   }

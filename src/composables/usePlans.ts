@@ -6,6 +6,7 @@ import { useAuth } from './useAuth'
 import { useNavigation } from './useNavigation'
 import { useRequests } from './useRequests'
 import { pushToast } from './useUi'
+import { useI18n } from './useI18n'
 import { maxPhotosForPlan, maxCategoriesForPlan } from '../lib/planLimits'
 
 const plans = ref<Plan[]>([])
@@ -17,9 +18,12 @@ const planMap = computed(() => {
 })
 
 function planLimitText(id: string, fallback: string): string {
+  const { t } = useI18n()
   const row = planMap.value.get(id)
   if (!row) return fallback
-  return row.request_limit === null ? 'ilimitados' : `${row.request_limit}/mês`
+  return row.request_limit === null
+    ? t('plans.unlimited')
+    : t('plans.perMonthShort', { count: row.request_limit })
 }
 
 const currentPlanRow = computed(() => planMap.value.get(useAuth().proProfile.value.plan) ?? null)
@@ -65,18 +69,59 @@ function hasFeature(feature: 'whatsappVisible' | 'advancedReports' | 'verifiedBa
   return Boolean(planFeatures.value[feature])
 }
 
+// Cada plano guarda chaves de i18n (não texto) para que nome, tagline,
+// features e cta sejam reescritos a cada troca de idioma.
 const PLANS = [
-  { id: 'gratuito', name: 'Gratuito', price: 'R$0', icon: User, tagline: 'Apenas cadastro do perfil', features: ['Cadastro profissional gratuito', 'Perfil público básico'], cta: 'Começar Grátis' },
-  { id: 'bronze', name: 'Bronze', price: 'R$34,90', icon: ShieldCheck, tagline: 'Para começar a atender', features: ['10 pedidos por mês', 'Até 1 foto', '1 categoria de serviço'], cta: 'Assinar Bronze' },
-  { id: 'prata', name: 'Prata', price: 'R$54,90', icon: Zap, tagline: 'Para crescer com visibilidade', features: ['30 pedidos por mês', 'Até 3 fotos', 'Até 3 categorias', 'Perfil completo', 'WhatsApp no perfil', 'Prioridade nas buscas'], cta: 'Assinar Prata' },
-  { id: 'ouro', name: 'Ouro', price: 'R$79,90', icon: Sparkles, tagline: 'O máximo para dominar a região', features: ['Pedidos ilimitados', 'Até 5 fotos', 'Categorias ilimitadas', 'Destaque nas pesquisas', 'Selo verificado', 'Estatísticas avançadas'], cta: 'Assinar Ouro' },
+  {
+    id: 'gratuito', icon: User,
+    nameKey: 'plans.gratuito', taglineKey: 'plans.taglineGratuito',
+    featureKeys: ['plans.featureFreeProfile', 'plans.featureBasicProfile'],
+    ctaKey: 'plans.ctaStartFree',
+  },
+  {
+    id: 'bronze', icon: ShieldCheck,
+    nameKey: 'plans.bronze', taglineKey: 'plans.taglineBronze',
+    featureKeys: ['plans.featureOrdersPerMonth', 'plans.feature1Photo', 'plans.feature1Category'],
+    ctaKey: 'plans.ctaSubscribeBronze',
+  },
+  {
+    id: 'prata', icon: Zap,
+    nameKey: 'plans.prata', taglineKey: 'plans.taglinePrata',
+    featureKeys: [
+      'plans.featureOrdersPerMonth', 'plans.feature3Photos', 'plans.feature3Categories',
+      'plans.featureFullProfile', 'plans.featureWhatsappProfile', 'plans.featurePriority',
+    ],
+    ctaKey: 'plans.ctaSubscribePrata',
+  },
+  {
+    id: 'ouro', icon: Sparkles,
+    nameKey: 'plans.ouro', taglineKey: 'plans.taglineOuro',
+    featureKeys: [
+      'plans.featureUnlimitedOrders', 'plans.feature5Photos', 'plans.featureUnlimitedCategories',
+      'plans.featureHighlight', 'plans.featureVerifiedBadge', 'plans.featureAdvancedStats',
+    ],
+    ctaKey: 'plans.ctaSubscribeOuro',
+  },
 ]
 
-const PLAN_LABELS: Record<string, string> = {
-  gratuito: 'Gratuito',
-  bronze: 'Bronze',
-  prata: 'Prata',
-  ouro: 'Ouro',
+// Rótulos legíveis por id de plano (traduzidos e reativos ao idioma).
+// 'gratuito' é traduzido; Bronze/Prata/Ouro são nomes de marca mantidos.
+const PLAN_LABELS = computed<Record<string, string>>(() => {
+  const { planText } = useI18n()
+  return {
+    gratuito: planText('gratuito'),
+    bronze: planText('bronze'),
+    prata: planText('prata'),
+    ouro: planText('ouro'),
+  }
+})
+
+// Preço de fallback (seed) usado quando a tabela plans ainda não tem a linha
+const PLAN_FALLBACK_PRICES: Record<string, string> = {
+  gratuito: 'R$0',
+  bronze: 'R$34,90',
+  prata: 'R$54,90',
+  ouro: 'R$79,90',
 }
 
 // Preços exibidos vêm de plans.monthly_price (fonte única); fallback = valor do seed
@@ -90,33 +135,41 @@ function dbPlanPrice(id: string, fallback: string): string {
   return row ? formatBRL(row.monthly_price, fallback) : fallback
 }
 const PLAN_PRICES = computed<Record<string, string>>(() => ({
-  gratuito: dbPlanPrice('gratuito', 'R$0'),
-  bronze: dbPlanPrice('bronze', 'R$34,90'),
-  prata: dbPlanPrice('prata', 'R$54,90'),
-  ouro: dbPlanPrice('ouro', 'R$79,90'),
+  gratuito: dbPlanPrice('gratuito', PLAN_FALLBACK_PRICES.gratuito),
+  bronze: dbPlanPrice('bronze', PLAN_FALLBACK_PRICES.bronze),
+  prata: dbPlanPrice('prata', PLAN_FALLBACK_PRICES.prata),
+  ouro: dbPlanPrice('ouro', PLAN_FALLBACK_PRICES.ouro),
 }))
 
-// Limite da feature ("N pedidos por mês" / "Pedidos ilimitados") lido do banco
-function withDbLimit(planId: string, feature: string): string {
+// Limite da feature ("N pedidos por mês" / "Pedidos ilimitados") lido do banco.
+// Recebe a chave da feature para casar pelo identificador, não pelo texto traduzido.
+function withDbLimit(planId: string, featureKey: string, t: (k: string, p?: Record<string, string | number>) => string): string {
   const row = planMap.value.get(planId)
-  if (!row) return feature
-  if (/^\d+\s+pedidos por mês$/.test(feature)) {
-    return row.request_limit === null ? 'Pedidos ilimitados' : `${row.request_limit} pedidos por mês`
+  if (featureKey === 'plans.featureOrdersPerMonth') {
+    if (!row) return t(featureKey, { count: 0 })
+    return row.request_limit === null
+      ? t('plans.featureUnlimitedOrders')
+      : t('plans.featureOrdersPerMonth', { count: row.request_limit })
   }
-  if (feature === 'Pedidos ilimitados' && row.request_limit !== null) {
-    return `${row.request_limit} pedidos por mês`
+  if (featureKey === 'plans.featureUnlimitedOrders' && row && row.request_limit !== null) {
+    return t('plans.featureOrdersPerMonth', { count: row.request_limit })
   }
-  return feature
+  return t(featureKey)
 }
 
-// PLANS com preço/limite mesclados do banco (copy de marketing mantida no resto)
-const displayPlans = computed(() =>
-  PLANS.map((p) => ({
-    ...p,
-    price: dbPlanPrice(p.id, p.price),
-    features: p.features.map((f) => withDbLimit(p.id, f)),
+// PLANS com nome/tagline/features/cta traduzidos + preço/limite mesclados do banco
+const displayPlans = computed(() => {
+  const { t } = useI18n()
+  return PLANS.map((p) => ({
+    id: p.id,
+    icon: p.icon,
+    name: t(p.nameKey),
+    tagline: t(p.taglineKey),
+    cta: t(p.ctaKey),
+    price: dbPlanPrice(p.id, PLAN_FALLBACK_PRICES[p.id] ?? 'R$0'),
+    features: p.featureKeys.map((f) => withDbLimit(p.id, f, t)),
   }))
-)
+})
 
 const upgradeRecommendation = computed(() => {
   const current = useAuth().proProfile.value.plan
@@ -130,9 +183,10 @@ async function subscribePlan(targetPlan: string) {
   const { proProfile, loadProfessionalProfile } = useAuth()
   const { loadData } = useRequests()
   const { goToTab } = useNavigation()
+  const { t, planText } = useI18n()
   try {
     if (!proProfile.value.id) {
-      pushToast('warning', 'Você precisa estar logado como profissional para assinar um plano.')
+      pushToast('warning', t('toasts.needLoginPro'))
       return
     }
     if (proProfile.value.plan === targetPlan) return
@@ -144,12 +198,12 @@ async function subscribePlan(targetPlan: string) {
       else if (targetPlan === 'gratuito' || targetPlan === 'bronze' || targetPlan === 'prata' || targetPlan === 'ouro') {
         proProfile.value.plan = targetPlan
       }
-      const label = displayPlans.value.find((p) => p.id === targetPlan)?.name ?? targetPlan
-      pushToast('success', `Plano alterado para ${label}.`)
+      const label = displayPlans.value.find((p) => p.id === targetPlan)?.name ?? planText(targetPlan)
+      pushToast('success', t('toasts.planChanged', { plan: label }))
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(proProfile.value.email)) {
-      pushToast('warning', 'Cadastre um e-mail válido no seu perfil para assinar o plano.')
+      pushToast('warning', t('toasts.invalidEmail'))
       goToTab('perfil_pro')
       return
     }
@@ -157,19 +211,20 @@ async function subscribePlan(targetPlan: string) {
     if (url) window.location.href = url
   } catch (err) {
     console.error('Erro ao assinar plano:', err)
-    pushToast('error', 'Erro ao assinar plano. Tente novamente.')
+    pushToast('error', t('toasts.subscribeError'))
   }
 }
 
 async function handleOpenPortal() {
   const { proProfile } = useAuth()
+  const { t } = useI18n()
   try {
     if (!proProfile.value.id) return
     const { url } = await createPortalSession(proProfile.value.id)
     if (url) window.location.href = url
   } catch (err) {
     console.error('Erro ao abrir portal de assinatura:', err)
-    pushToast('error', 'Erro ao abrir o portal de gerenciamento de assinatura.')
+    pushToast('error', t('toasts.portalError'))
   }
 }
 

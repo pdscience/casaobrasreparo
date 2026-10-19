@@ -5,6 +5,7 @@ import { CATEGORIES } from './lib/categories'
 import { useAuth } from './composables/useAuth'
 import { useNavigation } from './composables/useNavigation'
 import { useRequests } from './composables/useRequests'
+import { useI18n } from './composables/useI18n'
 import ProfileEditModal from './components/ProfileEditModal.vue'
 import AppHeader from './components/layout/AppHeader.vue'
 import AppFooter from './components/layout/AppFooter.vue'
@@ -26,6 +27,8 @@ const {
 const {
   onPageScroll,
 } = useNavigation()
+
+const { t, lang } = useI18n()
 
 const {
   loadData,
@@ -61,6 +64,13 @@ onMounted(() => {
     if (v) nextTick(() => { onPageScroll() })
   })
 })
+
+// Título e meta description acompanham o idioma selecionado
+watch(lang, () => {
+  document.title = t('app.title')
+  const meta = document.querySelector('meta[name="description"]')
+  if (meta) meta.setAttribute('content', t('app.description'))
+}, { immediate: true })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onPageScroll)
@@ -107,17 +117,17 @@ onUnmounted(() => {
       v-if="installPrompt"
       class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900 border border-amber-500/30 rounded-2xl px-4 py-3 shadow-xl"
     >
-      <p class="text-xs text-slate-200 font-bold">Instale o app para acesso rápido</p>
+      <p class="text-xs text-slate-200 font-bold">{{ t('app.install') }}</p>
       <button
         @click="installApp"
         class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all whitespace-nowrap"
       >
-        Instalar
+        {{ t('app.installCta') }}
       </button>
       <button
         @click="installPrompt = null"
         class="text-slate-400 hover:text-white text-xs font-bold px-1"
-        title="Dispensar"
+        :title="t('app.dismiss')"
       >
         ×
       </button>
