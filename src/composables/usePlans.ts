@@ -20,10 +20,15 @@ const planMap = computed(() => {
 function planLimitText(id: string, fallback: string): string {
   const { t } = useI18n()
   const row = planMap.value.get(id)
-  if (!row) return fallback
-  return row.request_limit === null
-    ? t('plans.unlimited')
-    : t('plans.perMonthShort', { count: row.request_limit })
+  if (row) {
+    return row.request_limit === null
+      ? t('plans.unlimited')
+      : t('plans.perMonthShort', { count: row.request_limit })
+  }
+  // Ainda sem a linha de plans: reaproveita o número do fallback com o texto
+  // traduzido (o fallback é pt e vazaria para en/es).
+  const count = fallback.match(/\d+/)?.[0]
+  return count ? t('plans.perMonthShort', { count: Number(count) }) : fallback
 }
 
 const currentPlanRow = computed(() => planMap.value.get(useAuth().proProfile.value.plan) ?? null)

@@ -42,7 +42,9 @@ export function validatePhone(countryCode: string, national: string): PhoneValid
   } catch {
     parsed = undefined
   }
-  if (!parsed || !parsed.isPossible()) return { ok: false, e164, digits: digits.length }
+  // `isValid` (e não `isPossible`) rejeita números com comprimento plausível
+  // mas inválidos (ex.: +5500000000000), que só falhariam depois no provedor.
+  if (!parsed || !parsed.isValid()) return { ok: false, e164, digits: digits.length }
   return { ok: true, e164: parsed.number, digits: digits.length }
 }
 
@@ -56,7 +58,7 @@ export function validateE164(phone: string): PhoneValidation {
   } catch {
     parsed = undefined
   }
-  if (!parsed || !parsed.isPossible()) return { ok: false, e164: `+${digits}`, digits: digits.length }
+  if (!parsed || !parsed.isValid()) return { ok: false, e164: `+${digits}`, digits: digits.length }
   return { ok: true, e164: parsed.number, digits: digits.length }
 }
 

@@ -79,7 +79,10 @@ export function flagOf(code: string): string {
 /** DDI do país em dígitos ("BR" → "55"). */
 export function dialOf(code: string): string {
   const cc = (code || '').toUpperCase()
-  return COUNTRIES.find((c) => c.code === cc)?.dial ?? ''
+  const dial = COUNTRIES.find((c) => c.code === cc)?.dial ?? ''
+  // Blindagem: nunca devolve algo que não seja dígitos (evita "+1-268").
+  // \D limpa o formato de exibição; ^0+ remove prefixo de tronco ("0055").
+  return dial.replace(/\D/g, '').replace(/^0+/, '')
 }
 
 /** Países ordenados pelo nome localizado no idioma pedido. */

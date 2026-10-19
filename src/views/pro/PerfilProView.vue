@@ -279,7 +279,7 @@ async function copyReferralLink() {
                 </div>
                 <div>
                   <h4 class="font-bold text-white">{{ p.name }}</h4>
-                  <p class="text-amber-400 font-extrabold">{{ p.price }}<span class="text-xs text-slate-400 font-medium">/mês</span></p>
+                  <p class="text-amber-400 font-extrabold">{{ p.price }}<span class="text-xs text-slate-400 font-medium">{{ t('pro.perMonth') }}</span></p>
                 </div>
               </div>
               <p class="text-[11px] text-slate-400 mb-3">{{ p.tagline }}</p>

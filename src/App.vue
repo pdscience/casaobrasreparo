@@ -67,6 +67,7 @@ onMounted(() => {
 
 // Título e meta description acompanham o idioma selecionado
 watch(lang, () => {
+  if (typeof document === 'undefined') return
   document.title = t('app.title')
   const meta = document.querySelector('meta[name="description"]')
   if (meta) meta.setAttribute('content', t('app.description'))

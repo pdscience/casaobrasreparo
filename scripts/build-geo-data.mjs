@@ -14,12 +14,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'src/data/geo')
 const regionsDir = join(outDir, 'regions')
 
+// O DDI tem de ser só dígitos. O `phonecode` do country-state-city vem em
+// formato de exibição ("+1-268", "+1-809 and 1-829", "0055"), então preferimos
+// o libphonenumber (territórios NANP devolvem "1") e só caímos no primeiro
+// grupo numérico do `phonecode` quando o país não tem DDI próprio (ex.: BV).
 function dialFor(isoCode, fallback) {
-  if (fallback) return String(fallback)
   try {
     return String(getCountryCallingCode(isoCode))
   } catch {
-    return ''
+    const match = String(fallback ?? '').match(/\d+/)
+    return match ? match[0].replace(/^0+/, '') : ''
   }
 }
 

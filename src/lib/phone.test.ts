@@ -25,12 +25,21 @@ describe('phone', () => {
     expect(toE164('US', '2015550123')).toBe('+12015550123')
   })
 
-  it('valida numeros possiveis do pais', () => {
+  it('usa DDI apenas com digitos em paises de codigo composto', () => {
+    // Antes o DDI vinha do phonecode de exibicao ("+1-268"), gerando "++1-268".
+    expect(toE164('AG', '2685551234')).toBe('+12685551234')
+    expect(toE164('GG', '1481555123')).toBe('+441481555123')
+    expect(toE164('BV', '')).toBe('')
+  })
+
+  it('valida numeros do pais', () => {
     const br = validatePhone('BR', '11987654321')
     expect(br.ok).toBe(true)
     expect(br.e164).toBe('+5511987654321')
     expect(validatePhone('BR', '123').ok).toBe(false)
     expect(validatePhone('BR', '').ok).toBe(false)
+    // comprimento plausivel mas numero invalido (rejeitado por isValid)
+    expect(validatePhone('BR', '00000000000').ok).toBe(false)
   })
 
   it('valida um telefone ja em E.164', () => {
@@ -39,6 +48,7 @@ describe('phone', () => {
     expect(ok.e164).toBe('+5511987654321')
     expect(validateE164('+5511').ok).toBe(false)
     expect(validateE164('').ok).toBe(false)
+    expect(validateE164('+5500000000000').ok).toBe(false)
   })
 
   it('descobre o pais a partir do E.164', () => {

@@ -21,6 +21,14 @@ function onlyDigits(phone: string): string {
   return digits.startsWith('55') ? digits : `55${digits}`
 }
 
+// Casa `needle` como token inteiro (limites não alfanuméricos). Evita falso
+// positivo de UF de 2 letras: "sp" dentro de "Espadas"/"pa" dentro de "Praça".
+function hasWord(haystack: string, needle: string): boolean {
+  if (!needle) return false
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(haystack)
+}
+
 // Heurística documentada: sem dados de área no pro OU sem endereço no pedido,
 // não filtra (melhor notificar a mais do que perder lead); senão exige
 // sobreposição cidade/UF/bairro nos dois sentidos.
@@ -34,7 +42,7 @@ function areaMatches(
     .map((a) => (a || '').trim().toLowerCase())
     .filter(Boolean)
   if (areas.length === 0) return true
-  return areas.some((a) => addr.includes(a) || a.includes(addr))
+  return areas.some((a) => hasWord(addr, a) || a.includes(addr))
 }
 
 async function alreadyLogged(

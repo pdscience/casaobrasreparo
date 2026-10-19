@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { CATEGORIES } from '../../lib/categories'
 import { filterProfessionals, paginate } from '../../lib/directoryFilters'
 import { useAuth } from '../../composables/useAuth'
@@ -65,8 +65,12 @@ const gridTotalPages = computed(() =>
   Math.max(1, Math.ceil(gridProfessionals.value.length / CARDS_PER_PAGE)),
 )
 const gridPaginated = computed(() =>
-  paginate(gridProfessionals.value, directoryPage.value, CARDS_PER_PAGE),
+  paginate(gridProfessionals.value, Math.min(directoryPage.value, gridTotalPages.value), CARDS_PER_PAGE),
 )
+// Mantém o indicador de página coerente quando a lista filtrada encolhe.
+watch(gridTotalPages, (tp) => {
+  if (directoryPage.value > tp) directoryPage.value = tp
+})
 </script>
 
 <template>

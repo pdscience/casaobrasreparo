@@ -31,8 +31,6 @@ const { canReceiveRequests } = usePlans()
 const { scheduleModal, schedulePrice } = useUi()
 const { t, categoryText, statusText } = useI18n()
 
-const BASE_TITLE = 'Casa Obras e Reparos - Gestão, Orçamentos & Agendamento com IA'
-
 function readAlertsPref(): boolean {
   try {
     return localStorage.getItem('casaobra_pro_alerts') !== 'off'
@@ -58,15 +56,25 @@ function toggleAlerts() {
 
 const knownRequestIds = ref<Set<string>>(new Set())
 let pollTimer: ReturnType<typeof setInterval> | null = null
+// Só depois do primeiro carregamento bem-sucedido dá para diferenciar pedidos
+// realmente novos dos que já existiam (evita aviso falso ao dar refresh).
+let seeded = false
+
+const baseTitle = () => t('app.title')
 
 async function pollRequests() {
   if (document.hidden || !proAlerts.value) return
   await loadData()
   const current = new Set(proRequests.value.map((r) => r.id))
+  if (!seeded) {
+    knownRequestIds.value = current
+    seeded = true
+    return
+  }
   const fresh = proRequests.value.filter((r) => !knownRequestIds.value.has(r.id))
   knownRequestIds.value = current
   if (fresh.length === 0) return
-  document.title = `(${fresh.length}) ${BASE_TITLE}`
+  document.title = `(${fresh.length}) ${baseTitle()}`
   pushToast('info', fresh.length === 1
     ? t('toasts.newRequestOne')
     : t('toasts.newRequestMany', { count: fresh.length }))
@@ -74,15 +82,13 @@ async function pollRequests() {
 
 onMounted(() => {
   if (proProfile.value.alerts_enabled === false) proAlerts.value = false
-  knownRequestIds.value = new Set(proRequests.value.map((r) => r.id))
-  document.title = BASE_TITLE
   pollTimer = setInterval(() => { void pollRequests() }, 30000)
 })
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
   pollTimer = null
-  document.title = BASE_TITLE
+  document.title = t('app.title')
 })
 </script>
 

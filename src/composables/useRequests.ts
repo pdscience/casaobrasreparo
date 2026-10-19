@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import type { ServiceRequest } from '../types'
 import { getServiceRequests, getProfessionals, getPlans, updateServiceRequest } from '../api/insforgeService'
 import { clientStatusGroup } from '../lib/requestStatus'
+import { categoriesOf } from '../lib/directoryFilters'
 import { useAuth } from './useAuth'
 import { usePlans } from './usePlans'
 import { useProfessionals } from './useProfessionals'
@@ -43,11 +44,13 @@ const proRequests = computed(() => {
   const { canReceiveRequests } = usePlans()
   const { proProfile } = useAuth()
   if (!canReceiveRequests.value) return []
-  const category = proProfile.value.category?.toLowerCase()
+  // O profissional pode atuar em varias categorias (campo `categories`).
+  // Sem categorias definidas, nao filtra (mostra tudo).
+  const cats = categoriesOf(proProfile.value).map((c) => c.toLowerCase())
   return requests.value.filter((r) =>
     r.status !== 'Concluído' &&
     (r.broadcast || r.professional_id === proProfile.value.id) &&
-    (!category || r.category?.toLowerCase() === category)
+    (cats.length === 0 || cats.includes((r.category ?? '').toLowerCase()))
   )
 })
 

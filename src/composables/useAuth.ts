@@ -199,7 +199,6 @@ async function handleRegister() {
       let storedRef: string | null = null
       try { storedRef = localStorage.getItem('casaobra_ref') } catch { storedRef = null }
       if (storedRef && !/^[A-Z0-9]{8}$/.test(storedRef)) storedRef = null
-      try { localStorage.removeItem('casaobra_ref') } catch { /* mantém o código p/ próxima tentativa */ }
       const pro = await createProfessional({
         auth_id: user.id,
         name: registerForm.value.name.trim(),
@@ -231,6 +230,9 @@ async function handleRegister() {
         requests_reset_at: null,
       })
       proProfile.value = pro
+      // Só consome o código de indicação depois do cadastro dar certo, para
+      // não perder a atribuição se createProfessional falhar.
+      try { localStorage.removeItem('casaobra_ref') } catch { /* ignora */ }
       useUi().showOnboardingPlans.value = true
     }
     goToTab(authRole.value === 'pro' ? 'pedidos_pro' : 'solicitar')

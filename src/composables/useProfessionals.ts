@@ -35,26 +35,28 @@ function resetDirectoryFilters() {
   filterBairro.value = 'Todos'
 }
 
+// Opções de filtro derivam dos profissionais VISÍVEIS (não dos ocultos por
+// plano), senão apareceriam opções que sempre devolvem lista vazia.
 const availableCategories = computed(() => {
   const cats = new Set(
-    professionals.value.flatMap(p => [p.category, ...(p.categories ?? [])].map(c => (c || '').trim()).filter(Boolean)),
+    visibleProfessionals.value.flatMap(p => [p.category, ...(p.categories ?? [])].map(c => (c || '').trim()).filter(Boolean)),
   )
   return ['Todas', ...Array.from(cats).sort()]
 })
 
 const availableUfs = computed(() => {
-  const ufs = new Set(professionals.value.map(p => (p.uf || '').trim().toUpperCase()).filter(Boolean))
+  const ufs = new Set(visibleProfessionals.value.map(p => (p.uf || '').trim().toUpperCase()).filter(Boolean))
   return ['Todas', ...Array.from(ufs).sort()]
 })
 
 const availableCidades = computed(() => {
-  const cidades = new Set(professionals.value.map(p => (p.cidade || '').trim()).filter(Boolean))
+  const cidades = new Set(visibleProfessionals.value.map(p => (p.cidade || '').trim()).filter(Boolean))
   return ['Todas', ...Array.from(cidades).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
 })
 
 const availableBairros = computed(() => {
   const bairros = new Set(
-    professionals.value.flatMap(p => (p.coverage_bairros ?? []).map(b => b.trim()).filter(Boolean)),
+    visibleProfessionals.value.flatMap(p => (p.coverage_bairros ?? []).map(b => b.trim()).filter(Boolean)),
   )
   return ['Todos', ...Array.from(bairros).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
 })
@@ -70,8 +72,10 @@ const filteredProfessionals = computed(() =>
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredProfessionals.value.length / CARDS_PER_PAGE)))
 
+// Clampa a página: se a lista encolher (ex.: voltando de outra aba com a
+// página adiantada), a fatia continua válida em vez de vir vazia.
 const paginatedProfessionals = computed(() =>
-  paginate(filteredProfessionals.value, directoryPage.value, CARDS_PER_PAGE))
+  paginate(filteredProfessionals.value, Math.min(directoryPage.value, totalPages.value), CARDS_PER_PAGE))
 
 watch([filterCategory, filterPlan, filterUf, filterCidade, filterBairro], () => {
   directoryPage.value = 1

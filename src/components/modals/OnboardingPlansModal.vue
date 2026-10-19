@@ -42,7 +42,7 @@ const { t } = useI18n()
               </div>
               <div>
                 <h4 class="font-bold text-white text-sm">{{ p.name }}</h4>
-                <p class="text-amber-400 font-extrabold text-sm">{{ p.price }}<span class="text-[10px] text-slate-400 font-medium">/mês</span></p>
+                <p class="text-amber-400 font-extrabold text-sm">{{ p.price }}<span class="text-[10px] text-slate-400 font-medium">{{ t('pro.perMonth') }}</span></p>
               </div>
             </div>
             <p class="text-[10px] text-slate-400 mb-2">{{ p.tagline }}</p>

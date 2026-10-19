@@ -191,6 +191,10 @@ function handleLandingCategory(categoryName: string) {
   // A grade de cartoes e a unica lista de categorias da landing: o formulario
   // de contato reusa a categoria escolhida aqui em vez de repetir a lista.
   landingCategory.value = isRealCategory ? categoryName : ''
+  // Escolher (ou limpar) um cartao descarta o servico digitado a mao, senao o
+  // estado "nao esta na lista" ficaria preso e enviaria a categoria errada.
+  contactForm.value.category = ''
+  contactForm.value.categoryOther = ''
   directoryPage.value = 1
   if (activeTab.value !== 'profissionais') {
     goToTab('profissionais')
@@ -517,8 +521,16 @@ onUnmounted(() => {
                 </button>
               </span>
             </div>
+            <div v-else-if="contactUnlisted" class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm font-semibold">
+                {{ contactForm.categoryOther || t('landing.servicoNaoLista') }}
+                <button type="button" @click="clearContactCategory" :aria-label="t('common.close')" class="hover:text-white transition-colors">
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </span>
+            </div>
             <button
-              v-else-if="!contactUnlisted"
+              v-else
               type="button"
               @click="scrollToId('categorias')"
               class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:border-emerald-500/40 transition-all text-left"

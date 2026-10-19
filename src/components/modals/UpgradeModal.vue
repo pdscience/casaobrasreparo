@@ -28,7 +28,7 @@ const { t } = useI18n()
         </div>
         <div>
           <h4 class="font-bold text-white text-lg">{{ t('modals.planLabel', { plan: upgradeRecommendation.label }) }}</h4>
-          <p class="text-amber-400 font-extrabold text-xl">{{ upgradeRecommendation.price }}<span class="text-sm text-slate-400 font-medium">/mês</span></p>
+          <p class="text-amber-400 font-extrabold text-xl">{{ upgradeRecommendation.price }}<span class="text-sm text-slate-400 font-medium">{{ t('pro.perMonth') }}</span></p>
         </div>
       </div>
       <ul class="space-y-2 text-sm text-slate-300">

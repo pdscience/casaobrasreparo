@@ -21,6 +21,20 @@ function onlyDigits(phone: string): string {
   return digits.startsWith('55') ? digits : `55${digits}`
 }
 
+// Twilio exige E.164 COM o "+" (o app grava "+5511987654321").
+function toTwilio(phone: string): string {
+  const digits = onlyDigits(phone)
+  return digits ? `+${digits}` : ''
+}
+
+// Casa `needle` como token inteiro (limites não alfanuméricos). Evita falso
+// positivo de UF de 2 letras: "sp" dentro de "Espadas"/"pa" dentro de "Praça".
+function hasWord(haystack: string, needle: string): boolean {
+  if (!needle) return false
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(haystack)
+}
+
 // Heurística documentada: sem dados de área no pro OU sem endereço no pedido,
 // não filtra (melhor notificar a mais do que perder lead); senão exige
 // sobreposição cidade/UF/bairro nos dois sentidos.
@@ -34,7 +48,7 @@ function areaMatches(
     .map((a) => (a || '').trim().toLowerCase())
     .filter(Boolean)
   if (areas.length === 0) return true
-  return areas.some((a) => addr.includes(a) || a.includes(addr))
+  return areas.some((a) => hasWord(addr, a) || a.includes(addr))
 }
 
 async function alreadyLogged(
@@ -139,7 +153,7 @@ export default async function (req: Request): Promise<Response> {
       if (!areaMatches(String(r.client_address ?? ''), p)) continue
       if (await alreadyLogged(client, r.id, p.id)) continue
       const body = `CasaObraReparos: novo pedido de ${r.category ?? 'serviço'} em ${String(r.client_address ?? '').slice(0, 60)}. Abra o app para ver detalhes.`
-      const ok = await sendSms(accountSid, authToken, fromNumber, onlyDigits(p.phone), body)
+      const ok = await sendSms(accountSid, authToken, fromNumber, toTwilio(p.phone), body)
       if (ok) {
         await client.database
           .from('notification_log')

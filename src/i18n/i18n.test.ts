@@ -36,9 +36,10 @@ describe('translate', () => {
     expect(translate('en', 'client.sendToN', { count: 7 })).toBe('Send to 7 professionals')
     expect(translate('es', 'client.sendToN', { count: 7 })).toBe('Enviar a 7 profesionales')
   })
-  it('faz fallback para o portugues quando a chave nao existe no idioma', () => {
-    // 'nav.entrar' existe em todos; usamos uma chave so em pt para forcar o fallback
-    expect(translate('en', 'landing.waOla')).toBe('Hi! I found the Casa Obras e Reparos website.')
+  it('faz fallback para o portugues quando o idioma nao tem catalogo', () => {
+    // Idioma sem catalogo exercita de fato o ramo de fallback (os tres
+    // catalogos reais tem as mesmas chaves, entao nao serviriam).
+    expect(translate('xx' as unknown as Lang, 'nav.entrar')).toBe('Entrar')
   })
   it('devolve a propria chave quando nao existe em nenhum idioma', () => {
     expect(translate('en', 'chave.que.nao.existe')).toBe('chave.que.nao.existe')
