@@ -7,7 +7,9 @@ import { useNavigation } from '../../composables/useNavigation'
 import { CARDS_PER_PAGE, useProfessionals } from '../../composables/useProfessionals'
 import { usePlans } from '../../composables/usePlans'
 import { useQuoteForm } from '../../composables/useQuoteForm'
+import { useUi } from '../../composables/useUi'
 import { useI18n } from '../../composables/useI18n'
+import type { Professional } from '../../types'
 import ClientSubTabs from '../../components/layout/ClientSubTabs.vue'
 import ProfessionalCard from '../../components/ProfessionalCard.vue'
 import {
@@ -46,6 +48,11 @@ const {
   handlePhotoUpload, handleAnalyzeWithAI, handleConfirmOrder,
   handleChooseProfessional, clearProfessionalSelection,
 } = useQuoteForm()
+const { profileModalPro } = useUi()
+
+function openProfile(pro: Professional): void {
+  profileModalPro.value = pro
+}
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
@@ -197,6 +204,7 @@ watch(gridTotalPages, (tp) => {
               :selected="selectedProfessional?.id === pro.id"
               @choose="handleChooseProfessional"
               @clear="clearProfessionalSelection"
+              @view="openProfile"
             />
           </div>
 
