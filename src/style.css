@@ -6,8 +6,20 @@
   --ink: #020617;
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* A app é escura: sem isso o navegador renderiza os popups nativos
+     (dropdown de <select>, date picker, scrollbar) no tema claro do sistema
+     e o texto branco das <option> fica invisível. */
+  color-scheme: dark;
+}
 body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #020617; }
+
+/* Garante fundo e texto próprios nas opções, independente do tema do SO. */
+select option {
+  background-color: #0f172a;
+  color: #f1f5f9;
+}
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
