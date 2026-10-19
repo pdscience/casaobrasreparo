@@ -25,7 +25,7 @@ const filterUf = ref<string>('Todas')
 const filterCidade = ref<string>('Todas')
 const filterBairro = ref<string>('Todos')
 const directoryPage = ref<number>(1)
-const CARDS_PER_PAGE = 12
+export const CARDS_PER_PAGE = 12
 
 function resetDirectoryFilters() {
   filterCategory.value = 'Todas'

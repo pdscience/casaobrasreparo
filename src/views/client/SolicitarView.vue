@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { CATEGORIES } from '../../lib/categories'
+import { filterProfessionals, paginate } from '../../lib/directoryFilters'
 import { useAuth } from '../../composables/useAuth'
 import { useNavigation } from '../../composables/useNavigation'
-import { useProfessionals } from '../../composables/useProfessionals'
+import { CARDS_PER_PAGE, useProfessionals } from '../../composables/useProfessionals'
 import { usePlans } from '../../composables/usePlans'
 import { useQuoteForm } from '../../composables/useQuoteForm'
 import { useI18n } from '../../composables/useI18n'
@@ -31,10 +32,9 @@ const { t, categoryText, complexityText, planText } = useI18n()
 const { activeTab, goToTab } = useNavigation()
 const {
   findProfessional,
-  filterCategory, filterPlan, filterUf, filterCidade, filterBairro,
+  filterPlan, filterUf, filterCidade, filterBairro,
   directoryPage,
-  availableCategories, availableUfs, availableCidades, availableBairros,
-  filteredProfessionals, totalPages, paginatedProfessionals,
+  availableUfs, availableCidades, availableBairros,
   visibleProfessionals, prataBronzeCount,
   resetDirectoryFilters,
 } = useProfessionals()
@@ -48,6 +48,25 @@ const {
 } = useQuoteForm()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+// Nesta aba a categoria e escolhida no formulario (passo 2) e nao existe um
+// filtro de categoria no diretorio. Por isso a grade ignora o filtro global de
+// categoria — senao profissionais sumiriam sem o cliente perceber.
+const gridProfessionals = computed(() =>
+  filterProfessionals(visibleProfessionals.value, {
+    category: 'Todas',
+    plan: filterPlan.value,
+    uf: filterUf.value,
+    cidade: filterCidade.value,
+    bairro: filterBairro.value,
+  }),
+)
+const gridTotalPages = computed(() =>
+  Math.max(1, Math.ceil(gridProfessionals.value.length / CARDS_PER_PAGE)),
+)
+const gridPaginated = computed(() =>
+  paginate(gridProfessionals.value, directoryPage.value, CARDS_PER_PAGE),
+)
 </script>
 
 <template>
@@ -112,7 +131,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
                 {{ t('client.availableProfessionals') }}
               </h3>
               <p class="text-[10px] text-slate-400 mt-0.5">
-                {{ filteredProfessionals.length }} {{ t('client.foundCount') }}
+                {{ gridProfessionals.length }} {{ t('client.foundCount') }}
                 <span v-if="selectedProfessional" class="text-amber-300">· {{ t('client.selectedLabel') }}: {{ selectedProfessional.name }}</span>
               </p>
             </div>
@@ -120,14 +139,6 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 
           <!-- FILTERS -->
           <div class="flex flex-wrap gap-2">
-            <select
-              v-model="filterCategory"
-              class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
-            >
-              <option v-for="cat in availableCategories" :key="cat" :value="cat">
-                {{ cat === 'Todas' ? '📋 ' + t('directory.allCategories') : categoryText(cat) }}
-              </option>
-            </select>
             <select
               v-model="filterPlan"
               class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
@@ -162,7 +173,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               </option>
             </select>
             <button
-              v-if="filterCategory !== 'Todas' || filterPlan !== 'Todos' || filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
+              v-if="filterPlan !== 'Todos' || filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
               type="button"
               @click="resetDirectoryFilters"
               class="px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
@@ -174,7 +185,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
           <!-- CARDS GRID -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <ProfessionalCard
-              v-for="pro in paginatedProfessionals"
+              v-for="pro in gridPaginated"
               :key="pro.id"
               :professional="pro"
               :plan-info="planMap.get(pro.plan) ?? null"
@@ -185,12 +196,12 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
             />
           </div>
 
-          <div v-if="filteredProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
+          <div v-if="gridProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
             <p class="text-sm text-slate-400">{{ t('client.noProfessionals') }}</p>
           </div>
 
           <!-- PAGINATION -->
-          <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-2">
+          <div v-if="gridTotalPages > 1" class="flex items-center justify-center gap-2 pt-2">
             <button
               type="button"
               @click="directoryPage = Math.max(1, directoryPage - 1)"
@@ -205,15 +216,15 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
               ← {{ t('common.prev') }}
             </button>
             <span class="text-[10px] text-slate-400">
-              {{ t('common.page') }} {{ directoryPage }} {{ t('common.of') }} {{ totalPages }}
+              {{ t('common.page') }} {{ directoryPage }} {{ t('common.of') }} {{ gridTotalPages }}
             </span>
             <button
               type="button"
-              @click="directoryPage = Math.min(totalPages, directoryPage + 1)"
-              :disabled="directoryPage === totalPages"
+              @click="directoryPage = Math.min(gridTotalPages, directoryPage + 1)"
+              :disabled="directoryPage === gridTotalPages"
               :class="[
                 'px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all',
-                directoryPage === totalPages
+                directoryPage === gridTotalPages
                   ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               ]"
