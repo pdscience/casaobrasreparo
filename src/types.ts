@@ -30,6 +30,10 @@ export interface Professional {
   portfolio_photos: string[]
   cidade: string
   uf: string
+  country_code: string
+  state: string
+  municipality: string
+  phone_country_code: string
   plan: 'gratuito' | 'bronze' | 'prata' | 'ouro'
   plan_status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid'
   stripe_customer_id: string | null
@@ -105,6 +109,11 @@ export interface User {
   bairro: string
   cidade: string
   uf: string
+  country_code: string
+  state: string
+  municipality: string
+  phone: string
+  phone_country_code: string
   category: string
   created_at?: string
   updated_at?: string

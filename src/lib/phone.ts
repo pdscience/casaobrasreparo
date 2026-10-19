@@ -1,4 +1,4 @@
-import { AsYouType, parsePhoneNumberFromString } from 'libphonenumber-js'
+import { AsYouType, parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { dialOf } from './geo'
 
 export interface PhoneValidation {
@@ -12,7 +12,7 @@ export function formatNational(countryCode: string, value: string): string {
   const cc = (countryCode || '').toUpperCase()
   if (!cc || !value) return value
   try {
-    return new AsYouType(cc).input(value)
+    return new AsYouType(cc as CountryCode).input(value)
   } catch {
     return value
   }
