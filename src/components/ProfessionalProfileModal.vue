@@ -39,7 +39,10 @@ watch(pro, async (current) => {
   const seq = ++requestSeq
   reviews.value = []
   reviewsError.value = false
-  if (!current) return
+  if (!current) {
+    reviewsLoading.value = false
+    return
+  }
   reviewsLoading.value = true
   try {
     const data = await getProfessionalReviews(current.id)
