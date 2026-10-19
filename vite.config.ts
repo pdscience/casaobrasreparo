@@ -21,8 +21,29 @@ export default defineConfig({
         start_url: '/',
         icons: [{ src: 'logo_casa.png', sizes: 'any', type: 'image/png' }],
       },
+      workbox: {
+        // Os chunks de região geográfica (um por país) são carregados sob demanda
+        // e não devem inflar o precache do service worker.
+        manifestTransforms: [
+          (manifest) => ({
+            manifest: manifest.filter((entry) => !/(^|\/)assets\/geo-/.test(entry.url)),
+          }),
+        ],
+      },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // Prefixa os chunks de país/estado para que o precache do PWA consiga
+        // identificá-los e deixá-los de fora.
+        chunkFileNames: (chunk) =>
+          /^[A-Z]{2}$/.test(chunk.name)
+            ? 'assets/geo-[name]-[hash].js'
+            : 'assets/[name]-[hash].js',
+      },
+    },
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
