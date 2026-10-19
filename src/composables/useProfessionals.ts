@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import type { Professional } from '../types'
 import { filterProfessionals, paginate } from '../lib/directoryFilters'
 import { usePlans } from './usePlans'
+import { useFavorites } from './useFavorites'
 
 const professionals = ref<Professional[]>([])
 
@@ -25,6 +26,8 @@ const filterUf = ref<string>('Todas')
 const filterCidade = ref<string>('Todas')
 const filterBairro = ref<string>('Todos')
 const directoryPage = ref<number>(1)
+const favoritesOnly = ref<boolean>(false)
+const { favoriteSet } = useFavorites()
 export const CARDS_PER_PAGE = 12
 
 function resetDirectoryFilters() {
@@ -33,6 +36,7 @@ function resetDirectoryFilters() {
   filterUf.value = 'Todas'
   filterCidade.value = 'Todas'
   filterBairro.value = 'Todos'
+  favoritesOnly.value = false
 }
 
 // Opções de filtro derivam dos profissionais VISÍVEIS (não dos ocultos por
@@ -61,14 +65,16 @@ const availableBairros = computed(() => {
   return ['Todos', ...Array.from(bairros).sort((a, b) => a.localeCompare(b, 'pt-BR'))]
 })
 
-const filteredProfessionals = computed(() =>
-  filterProfessionals(visibleProfessionals.value, {
+const filteredProfessionals = computed(() => {
+  const base = filterProfessionals(visibleProfessionals.value, {
     category: filterCategory.value,
     plan: filterPlan.value,
     uf: filterUf.value,
     cidade: filterCidade.value,
     bairro: filterBairro.value,
-  }))
+  })
+  return favoritesOnly.value ? base.filter((p) => favoriteSet.value.has(p.id)) : base
+})
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredProfessionals.value.length / CARDS_PER_PAGE)))
 
@@ -77,7 +83,7 @@ const totalPages = computed(() => Math.max(1, Math.ceil(filteredProfessionals.va
 const paginatedProfessionals = computed(() =>
   paginate(filteredProfessionals.value, Math.min(directoryPage.value, totalPages.value), CARDS_PER_PAGE))
 
-watch([filterCategory, filterPlan, filterUf, filterCidade, filterBairro], () => {
+watch([filterCategory, filterPlan, filterUf, filterCidade, filterBairro, favoritesOnly], () => {
   directoryPage.value = 1
 })
 
@@ -100,7 +106,7 @@ export function useProfessionals() {
     visibleProfessionals,
     findProfessional,
     filterCategory, filterPlan, filterUf, filterCidade, filterBairro,
-    directoryPage,
+    directoryPage, favoritesOnly,
     availableCategories, availableUfs, availableCidades, availableBairros,
     filteredProfessionals, totalPages, paginatedProfessionals,
     prataBronzeCount,
