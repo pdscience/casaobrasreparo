@@ -187,7 +187,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
               </div>
               <span v-if="review.review_date" class="text-[10px] text-slate-500">{{ formatReviewDate(review.review_date, lang) }}</span>
             </div>
-            <p class="text-[12px] text-slate-300 mt-1.5">{{ review.comment || t('profile.noReviews') }}</p>
+            <p class="text-[12px] text-slate-300 mt-1.5">{{ review.comment || t('profile.noComment') }}</p>
           </div>
         </div>
       </div>

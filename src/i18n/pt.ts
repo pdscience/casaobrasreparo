@@ -549,6 +549,7 @@ export default {
     title: 'Perfil do profissional',
     reviews: 'Avaliações',
     noReviews: 'Ainda não há avaliações.',
+    noComment: 'Sem comentário.',
     reviewsUnavailable: 'Não foi possível carregar as avaliações.',
     share: 'Compartilhar',
     favorite: 'Favoritar',

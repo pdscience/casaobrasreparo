@@ -61,32 +61,9 @@ async function handleShare(): Promise<void> {
 
 <template>
   <div
-    class="relative bg-slate-900 rounded-2xl border flex flex-col transition-all overflow-hidden"
+    class="bg-slate-900 rounded-2xl border flex flex-col transition-all overflow-hidden"
     :class="selected ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-800 hover:border-amber-500/30 hover:shadow-lg hover:shadow-black/30'"
   >
-    <div class="absolute top-2 right-2 z-10 flex items-center gap-1">
-      <button
-        type="button"
-        @click.stop="toggleFavorite(professional.id)"
-        :aria-label="isFavorite(professional.id) ? t('card.unfavorite') : t('card.favorite')"
-        :aria-pressed="isFavorite(professional.id)"
-        class="p-1.5 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:border-rose-500/60 transition-colors"
-      >
-        <Heart
-          class="w-3.5 h-3.5"
-          :class="isFavorite(professional.id) ? 'fill-rose-500 text-rose-500' : ''"
-        />
-      </button>
-      <button
-        type="button"
-        @click.stop="handleShare"
-        :aria-label="t('card.share')"
-        class="p-1.5 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:border-amber-500/60 transition-colors"
-      >
-        <Share2 class="w-3.5 h-3.5" />
-      </button>
-    </div>
-
     <!-- FAIXA DO PLANO -->
     <div class="h-10" :class="planInfo?.badge_bg || 'bg-slate-800/70'"></div>
 
@@ -106,15 +83,37 @@ async function handleShare(): Promise<void> {
       </div>
 
       <div class="min-w-0 flex-1">
-        <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center justify-between gap-2">
           <p class="font-bold text-white text-sm leading-tight truncate">{{ professional.name }}</p>
-          <span
-            v-if="professional.plan"
-            :class="[planInfo?.badge_bg, planInfo?.badge_text, planInfo?.badge_border]"
-            class="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0"
-          >
-            {{ planText(professional.plan) }}
-          </span>
+          <div class="flex items-center gap-1 shrink-0">
+            <span
+              v-if="professional.plan"
+              :class="[planInfo?.badge_bg, planInfo?.badge_text, planInfo?.badge_border]"
+              class="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0"
+            >
+              {{ planText(professional.plan) }}
+            </span>
+            <button
+              type="button"
+              @click.stop="toggleFavorite(professional.id)"
+              :aria-label="isFavorite(professional.id) ? t('card.unfavorite') : t('card.favorite')"
+              :aria-pressed="isFavorite(professional.id)"
+              class="p-1 rounded-full text-slate-400 hover:text-rose-400 transition-colors shrink-0"
+            >
+              <Heart
+                class="w-3.5 h-3.5"
+                :class="isFavorite(professional.id) ? 'fill-rose-500 text-rose-500' : ''"
+              />
+            </button>
+            <button
+              type="button"
+              @click.stop="handleShare"
+              :aria-label="t('card.share')"
+              class="p-1 rounded-full text-slate-400 hover:text-amber-400 transition-colors shrink-0"
+            >
+              <Share2 class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
         <div class="mt-3 space-y-1 min-w-0">
           <p class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300">

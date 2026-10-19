@@ -157,6 +157,13 @@ function handleLandingCategory(categoryName: string) {
     <div v-else-if="favoritesOnly && favoritesCount === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
       <p class="text-sm text-slate-300 font-bold">{{ t('directory.noFavoritesTitle') }}</p>
       <p class="text-xs text-slate-400 mt-1">{{ t('directory.noFavoritesDesc') }}</p>
+      <button
+        type="button"
+        @click="favoritesOnly = false"
+        class="mt-3 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
+      >
+        {{ t('directory.clearFilters') }}
+      </button>
     </div>
     <div v-else-if="paginatedProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
       <p class="text-sm text-slate-300 font-bold">{{ t('directory.emptyTitle') }}</p>

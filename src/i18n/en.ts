@@ -548,6 +548,7 @@ export default {
     title: 'Professional profile',
     reviews: 'Reviews',
     noReviews: 'No reviews yet.',
+    noComment: 'No comment.',
     reviewsUnavailable: 'Could not load reviews.',
     share: 'Share',
     favorite: 'Save',
