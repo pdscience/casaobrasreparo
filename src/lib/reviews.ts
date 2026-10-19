@@ -13,7 +13,7 @@ export function clampStars(value: unknown): number {
 
 export function formatReviewDate(value: string | null | undefined, lang: string): string {
   if (!value) return ''
-  const date = new Date(String(value).slice(0, 10))
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`)
   if (Number.isNaN(date.getTime())) return ''
   try {
     return new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }).format(date)
