@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Professional, Plan } from '../types'
-import { Star, MessageCircle, X, MapPin, FileText, User, Wrench } from 'lucide-vue-next'
+import { Star, MessageCircle, X, MapPin, FileText, User, Wrench, Heart, Share2 } from 'lucide-vue-next'
 import { buildWhatsAppLink } from '../lib/whatsapp'
 import { countryName } from '../lib/geo'
+import { shareProfessional } from '../lib/share'
 import { useAuth } from '../composables/useAuth'
+import { useFavorites } from '../composables/useFavorites'
+import { useUi } from '../composables/useUi'
 import { useI18n } from '../composables/useI18n'
 
 const props = defineProps<{
@@ -17,6 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'choose', professional: Professional): void
   (e: 'clear'): void
+  (e: 'view', professional: Professional): void
 }>()
 
 const { t, categoryText, planText, lang } = useI18n()
@@ -38,14 +42,51 @@ const extraCategories = computed(() => {
 })
 
 const { authUser } = useAuth()
+const { isFavorite, toggleFavorite } = useFavorites()
+const { pushToast } = useUi()
+
+async function handleShare(): Promise<void> {
+  const mode = await shareProfessional(props.professional, {
+    share: typeof navigator !== 'undefined' && navigator.share
+      ? (data) => navigator.share(data)
+      : undefined,
+    clipboard: typeof navigator !== 'undefined' ? navigator.clipboard : undefined,
+    open: (url) => window.open(url, '_blank', 'noopener'),
+  })
+  if (mode === 'clipboard') pushToast('success', t('profile.shareCopied'))
+  if (mode === 'whatsapp') pushToast('info', t('profile.share'))
+}
 
 </script>
 
 <template>
   <div
-    class="bg-slate-900 rounded-2xl border flex flex-col transition-all overflow-hidden"
+    class="relative bg-slate-900 rounded-2xl border flex flex-col transition-all overflow-hidden"
     :class="selected ? 'border-amber-500/60 ring-1 ring-amber-500/30' : 'border-slate-800 hover:border-amber-500/30 hover:shadow-lg hover:shadow-black/30'"
   >
+    <div class="absolute top-2 right-2 z-10 flex items-center gap-1">
+      <button
+        type="button"
+        @click.stop="toggleFavorite(professional.id)"
+        :aria-label="isFavorite(professional.id) ? t('card.unfavorite') : t('card.favorite')"
+        :aria-pressed="isFavorite(professional.id)"
+        class="p-1.5 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:border-rose-500/60 transition-colors"
+      >
+        <Heart
+          class="w-3.5 h-3.5"
+          :class="isFavorite(professional.id) ? 'fill-rose-500 text-rose-500' : ''"
+        />
+      </button>
+      <button
+        type="button"
+        @click.stop="handleShare"
+        :aria-label="t('card.share')"
+        class="p-1.5 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:border-amber-500/60 transition-colors"
+      >
+        <Share2 class="w-3.5 h-3.5" />
+      </button>
+    </div>
+
     <!-- FAIXA DO PLANO -->
     <div class="h-10" :class="planInfo?.badge_bg || 'bg-slate-800/70'"></div>
 
@@ -141,6 +182,13 @@ const { authUser } = useAuth()
         <MessageCircle class="w-3.5 h-3.5" />
         WhatsApp
       </a>
+      <button
+        type="button"
+        @click="emit('view', professional)"
+        class="px-3 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 bg-slate-800 text-slate-300 border border-slate-700 hover:text-white hover:border-slate-500"
+      >
+        {{ t('card.viewProfile') }}
+      </button>
       <button
         v-if="selectable && !selected"
         type="button"
