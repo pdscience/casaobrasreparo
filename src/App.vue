@@ -16,6 +16,7 @@ import OnboardingPlansModal from './components/modals/OnboardingPlansModal.vue'
 import ScheduleModal from './components/modals/ScheduleModal.vue'
 import RateModal from './components/modals/RateModal.vue'
 import ReceiptModal from './components/modals/ReceiptModal.vue'
+import ProfessionalProfileModal from './components/ProfessionalProfileModal.vue'
 
 const {
   authUser, userProfile, userMode,
@@ -97,6 +98,8 @@ onUnmounted(() => {
     <RateModal />
 
     <ReceiptModal />
+
+    <ProfessionalProfileModal />
 
     <!-- MODAL DE EDIÇÃO DE PERFIL / CONTA -->
     <ProfileEditModal

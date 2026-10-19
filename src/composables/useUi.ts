@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { ServiceRequest } from '../types'
+import type { Professional, ServiceRequest } from '../types'
 
 const viewReceiptModal = ref<ServiceRequest | null>(null)
 const rateOrderModal = ref<ServiceRequest | null>(null)
@@ -15,6 +15,7 @@ const schedulePrice = ref('')
 const scheduleObs = ref('')
 // Categoria escolhida na landing: global para sobreviver a navegacao (a LP desmonta)
 const landingCategory = ref('')
+const profileModalPro = ref<Professional | null>(null)
 
 const toasts = ref<{ id: number; kind: 'success' | 'error' | 'info' | 'warning'; message: string }[]>([])
 let toastSeq = 0
@@ -30,6 +31,6 @@ export function dismissToast(id: number): void {
 export function useUi() {
   return { viewReceiptModal, rateOrderModal, scheduleModal, showUpgradeModal, showOnboardingPlans,
     isMobileMenuOpen, ratingStars, ratingComment, scheduleDate, scheduleTime, schedulePrice, scheduleObs,
-    landingCategory,
+    landingCategory, profileModalPro,
     toasts, pushToast, dismissToast }
 }
