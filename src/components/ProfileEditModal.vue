@@ -5,7 +5,12 @@ import type { Professional, User as UserProfile } from '../types'
 import { uploadProfessionalAvatar, updateProfessional, updateUserRecord, createProfessional, uploadPortfolioPhoto } from '../api/insforgeService'
 import { useNavigation } from '../composables/useNavigation'
 import { usePlans } from '../composables/usePlans'
+import { useI18n } from '../composables/useI18n'
 import { canAddPhoto, canAddCategory, isOverCategoryLimit } from '../lib/planLimits'
+import { dialOf } from '../lib/geo'
+import { countryFromE164, validateE164 } from '../lib/phone'
+import AddressFields from './AddressFields.vue'
+import PhoneInput from './PhoneInput.vue'
 
 const props = defineProps<{
   open: boolean
@@ -38,19 +43,26 @@ const avatarFile = ref<File | null>(null)
 const avatarPreview = ref<string | null>(null)
 const coverageBairros = ref<string[]>([])
 const newBairro = ref('')
-const proCidade = ref('')
-const proUf = ref('')
+const phoneCountry = ref('BR')
+const proCountryCode = ref('BR')
+const proStateCode = ref('')
+const proStateName = ref('')
+const proMunicipality = ref('')
 
 const birthDate = ref('')
 const address = ref('')
 const bairro = ref('')
-const cidade = ref('')
-const uf = ref('')
+const userCountryCode = ref('BR')
+const userStateCode = ref('')
+const userStateName = ref('')
+const userMunicipality = ref('')
+
+const { t, categoryText } = useI18n()
 
 const title = computed(() =>
   props.role === 'pro' && !props.professional
-    ? 'Cadastrar Perfil Profissional'
-    : (props.role === 'pro' ? 'Editar Perfil Profissional' : 'Editar Meus Dados'),
+    ? t('profile.registerTitle')
+    : (props.role === 'pro' ? t('profile.editProTitle') : t('profile.editMyData')),
 )
 const currentAvatar = computed(() => avatarPreview.value || props.professional?.avatar || '')
 
@@ -59,7 +71,9 @@ const { planFeatures } = usePlans()
 const maxPhotos = computed(() => planFeatures.value.maxPhotos)
 const maxCategories = computed(() => planFeatures.value.maxCategories)
 const categoriesLabel = computed(() =>
-  maxCategories.value === null ? 'Ilimitadas' : `${selectedCategories.value.length} de ${maxCategories.value}`,
+  maxCategories.value === null
+    ? t('profile.unlimitedCategories')
+    : `${selectedCategories.value.length} de ${maxCategories.value}`,
 )
 
 watch(
@@ -82,12 +96,15 @@ watch(
       photoPreviews.value = []
       email.value = props.professional?.email ?? ''
       phone.value = props.professional?.phone ?? ''
+      phoneCountry.value = countryFromE164(props.professional?.phone ?? '') || props.professional?.country_code || 'BR'
       pixKey.value = props.professional?.pix_key ?? ''
       bio.value = props.professional?.bio ?? ''
       coverageBairros.value = [...(props.professional?.coverage_bairros ?? [])]
       newBairro.value = ''
-      proCidade.value = props.professional?.cidade ?? ''
-      proUf.value = props.professional?.uf ?? ''
+      proCountryCode.value = props.professional?.country_code || 'BR'
+      proStateCode.value = props.professional?.uf || ''
+      proStateName.value = props.professional?.state || ''
+      proMunicipality.value = props.professional?.municipality || props.professional?.cidade || ''
       return
     }
 
@@ -95,8 +112,12 @@ watch(
     birthDate.value = props.user?.birth_date ?? ''
     address.value = props.user?.address ?? ''
     bairro.value = props.user?.bairro ?? ''
-    cidade.value = props.user?.cidade ?? ''
-    uf.value = props.user?.uf ?? ''
+    phone.value = props.user?.phone ?? ''
+    phoneCountry.value = countryFromE164(props.user?.phone ?? '') || props.user?.country_code || 'BR'
+    userCountryCode.value = props.user?.country_code || 'BR'
+    userStateCode.value = props.user?.uf || ''
+    userStateName.value = props.user?.state || ''
+    userMunicipality.value = props.user?.municipality || props.user?.cidade || ''
   },
 )
 
@@ -131,7 +152,9 @@ function toggleCategory(cat: string) {
     return
   }
   if (!canAddCategory(selectedCategories.value, maxCategories.value)) {
-    fail(`Seu plano permite até ${maxCategories.value === null ? 'categorias ilimitadas' : maxCategories.value + ' categoria(s)'}.`)
+    fail(maxCategories.value === null
+      ? t('profile.errPlanUnlimitedCategories')
+      : t('profile.errPlanCategories', { count: maxCategories.value }))
     return
   }
   selectedCategories.value.push(cat)
@@ -141,7 +164,7 @@ function handlePortfolioSelect(e: Event) {
   const files = Array.from((e.target as HTMLInputElement).files ?? [])
   for (const file of files) {
     if (!canAddPhoto(portfolioPhotos.value.length + photoFiles.value.length, maxPhotos.value)) {
-      fail(`Seu plano permite até ${maxPhotos.value} foto(s) no portfólio.`)
+      fail(t('profile.errPlanPhotos', { count: maxPhotos.value }))
       break
     }
     const idx = photoFiles.value.push(file) - 1
@@ -172,7 +195,7 @@ async function handleSave() {
   errorMessage.value = ''
   const trimmedName = name.value.trim()
   if (!trimmedName) {
-    fail('Informe o nome.')
+    fail(t('profile.errName'))
     return
   }
 
@@ -181,16 +204,16 @@ async function handleSave() {
     if (!professional) {
       // Modo cadastro: cria a linha do profissional vinculada ao login atual
       if (!props.authId) {
-        fail('Faça login novamente para cadastrar o perfil.')
+        fail(t('profile.errLoginAgain'))
         return
       }
-      const createDigits = phone.value.replace(/\D/g, '')
-      if (createDigits.length < 10 || createDigits.length > 11) {
-        fail('Informe um telefone válido com DDD (10 ou 11 dígitos).')
+      const createPhone = validateE164(phone.value)
+      if (!createPhone.ok) {
+        fail(t('common.errTelefoneInvalido'))
         return
       }
       if (isOverCategoryLimit(selectedCategories.value, maxCategories.value)) {
-        fail('Número de categorias acima do limite do seu plano.')
+        fail(t('profile.errCategoryLimit'))
         return
       }
       saving.value = true
@@ -206,12 +229,16 @@ async function handleSave() {
           categories: [...selectedCategories.value],
           portfolio_photos: [],
           email: email.value.trim(),
-          phone: phone.value,
+          phone: createPhone.e164,
+          phone_country_code: dialOf(phoneCountry.value),
           pix_key: pixKey.value,
           bio: bio.value,
           coverage_bairros: [...coverageBairros.value],
-          cidade: proCidade.value.trim(),
-          uf: proUf.value.trim().toUpperCase(),
+          cidade: proMunicipality.value.trim(),
+          uf: proStateCode.value.trim().toUpperCase(),
+          country_code: proCountryCode.value,
+          state: proStateName.value.trim(),
+          municipality: proMunicipality.value.trim(),
           avatar: avatarUrl,
           auth_id: ownerId,
           rating: 0,
@@ -231,23 +258,23 @@ async function handleSave() {
         emit('close')
       } catch (err) {
         console.error('Erro ao criar perfil profissional:', err)
-        fail('Não foi possível salvar as alterações. Tente novamente.')
+        fail(t('profile.errSave'))
       } finally {
         saving.value = false
       }
       return
     }
-    const digits = phone.value.replace(/\D/g, '')
-    if (digits.length < 10 || digits.length > 11) {
-      fail('Informe um telefone válido com DDD (10 ou 11 dígitos).')
+    const phoneCheck = validateE164(phone.value)
+    if (!phoneCheck.ok) {
+      fail(t('common.errTelefoneInvalido'))
       return
     }
     if (isOverCategoryLimit(selectedCategories.value, maxCategories.value)) {
-      fail('Número de categorias acima do limite do seu plano.')
+      fail(t('profile.errCategoryLimit'))
       return
     }
     if (maxPhotos.value > 0 && portfolioPhotos.value.length + photoFiles.value.length > maxPhotos.value) {
-      fail('Remova fotos excedentes para adequar ao plano.')
+      fail(t('profile.errRemovePhotos'))
       return
     }
 
@@ -255,13 +282,13 @@ async function handleSave() {
     try {
       const ownerId = professional.auth_id
       if (avatarFile.value && !ownerId) {
-        fail('Faça login novamente para enviar a foto do perfil.')
+        fail(t('profile.errLoginPhoto'))
         return
       }
       const avatarUrl = avatarFile.value && ownerId ? await uploadProfessionalAvatar(avatarFile.value, ownerId) : professional.avatar
       const uploaded: string[] = []
       for (const file of photoFiles.value) {
-        if (!ownerId) { fail('Faça login novamente para enviar as fotos.'); return }
+        if (!ownerId) { fail(t('profile.errLoginPhotos')); return }
         uploaded.push(await uploadPortfolioPhoto(file, ownerId))
       }
       const finalPhotos = [...portfolioPhotos.value, ...uploaded]
@@ -271,19 +298,23 @@ async function handleSave() {
         categories: [...selectedCategories.value],
         portfolio_photos: finalPhotos,
         email: email.value.trim(),
-        phone: phone.value,
+        phone: phoneCheck.e164,
+        phone_country_code: dialOf(phoneCountry.value),
         pix_key: pixKey.value,
         bio: bio.value,
         coverage_bairros: [...coverageBairros.value],
-        cidade: proCidade.value.trim(),
-        uf: proUf.value.trim().toUpperCase(),
+        cidade: proMunicipality.value.trim(),
+        uf: proStateCode.value.trim().toUpperCase(),
+        country_code: proCountryCode.value,
+        state: proStateName.value.trim(),
+        municipality: proMunicipality.value.trim(),
         avatar: avatarUrl,
       })
       emit('saved', updated)
       emit('close')
     } catch (err) {
       console.error('Erro ao salvar perfil:', err)
-      fail('Não foi possível salvar as alterações. Tente novamente.')
+      fail(t('profile.errSave'))
     } finally {
       saving.value = false
     }
@@ -294,12 +325,22 @@ async function handleSave() {
   if (!user) return
   saving.value = true
   try {
+    const clientPhone = validateE164(phone.value)
+    if (phone.value.trim() && !clientPhone.ok) {
+      fail(t('common.errTelefoneInvalido'))
+      return
+    }
     const payload: Partial<UserProfile> = {
       name: trimmedName,
       address: address.value,
       bairro: bairro.value,
-      cidade: cidade.value,
-      uf: uf.value.trim().toUpperCase(),
+      cidade: userMunicipality.value.trim(),
+      uf: userStateCode.value.trim().toUpperCase(),
+      country_code: userCountryCode.value,
+      state: userStateName.value.trim(),
+      municipality: userMunicipality.value.trim(),
+      phone: phone.value.trim() ? clientPhone.e164 : '',
+      phone_country_code: dialOf(phoneCountry.value),
     }
     if (birthDate.value) payload.birth_date = birthDate.value
     const updated = await updateUserRecord(user.auth_id, payload)
@@ -307,7 +348,7 @@ async function handleSave() {
     emit('close')
   } catch (err) {
     console.error('Erro ao salvar dados da conta:', err)
-    fail('Não foi possível salvar as alterações. Tente novamente.')
+    fail(t('profile.errSave'))
   } finally {
     saving.value = false
   }
@@ -327,14 +368,14 @@ async function handleSave() {
               </div>
               <div>
                 <h2 class="font-black text-white text-lg leading-tight">{{ title }}</h2>
-                <p class="text-[11px] text-slate-400">Atualize suas informações</p>
+                <p class="text-[11px] text-slate-400">{{ t('profile.updateInfo') }}</p>
               </div>
             </div>
             <button
               type="button"
               :disabled="saving"
               class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-all disabled:opacity-40"
-              title="Fechar"
+              :title="t('common.close')"
               @click="emit('close')"
             >
               <X class="w-5 h-5" />
@@ -346,22 +387,22 @@ async function handleSave() {
           <!-- PRESTADOR: FOTO -->
           <div v-if="role === 'pro'" class="flex items-center gap-3">
             <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
-              <img v-if="currentAvatar" :src="currentAvatar" alt="Foto de perfil" class="w-full h-full object-cover" />
+              <img v-if="currentAvatar" :src="currentAvatar" :alt="t('profile.photoAlt')" class="w-full h-full object-cover" />
               <User v-else class="w-6 h-6 text-slate-500" />
             </div>
             <label class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition-all flex items-center gap-1.5">
               <Camera class="w-3.5 h-3.5" />
-              Escolher Foto
+              {{ t('profile.choosePhoto') }}
               <input type="file" accept="image/*" class="hidden" @change="handleAvatarUpload" />
             </label>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">Nome</label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.name') }}</label>
             <input
               v-model="name"
               type="text"
-              :placeholder="role === 'pro' ? 'Nome profissional' : 'Seu nome'"
+              :placeholder="role === 'pro' ? t('profile.proName') : t('auth.seuNome')"
               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
             />
           </div>
@@ -370,7 +411,7 @@ async function handleSave() {
           <template v-if="role === 'pro'">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Categorias ({{ categoriesLabel }})</label>
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.categories', { label: categoriesLabel }) }}</label>
                 <div class="max-h-40 overflow-y-auto space-y-1 bg-slate-950 border border-slate-800 rounded-xl p-2">
                   <label
                     v-for="cat in categories"
@@ -384,74 +425,59 @@ async function handleSave() {
                       class="accent-amber-500"
                       @change="toggleCategory(cat)"
                     />
-                    {{ cat }}
+                    {{ categoryText(cat) }}
                   </label>
                 </div>
                 <p v-if="maxCategories !== null && !canAddCategory(selectedCategories, maxCategories)" class="text-[10px] text-amber-300 mt-1.5">
-                  Limite do seu plano atingido.
-                  <button type="button" class="font-bold underline" @click="emit('close'); goToTab('perfil_pro')">Ver planos</button>
+                  {{ t('plans.featureLimitReached') }}
+                  <button type="button" class="font-bold underline" @click="emit('close'); goToTab('perfil_pro')">{{ t('profile.viewPlans') }}</button>
                 </p>
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">E-mail para Assinatura</label>
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.emailSubscription') }}</label>
                 <input
                   v-model="email"
                   type="email"
-                  placeholder="voce@email.com"
+                  :placeholder="t('auth.emailPlaceholder')"
                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
                 />
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">WhatsApp de Atendimento</label>
-                <input
-                  v-model="phone"
-                  type="text"
-                  placeholder="(11) 99999-9999"
-                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
+                <PhoneInput
+                  v-model:phone="phone"
+                  v-model:phone-country="phoneCountry"
                 />
               </div>
               <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Chave PIX para Recibos</label>
+                <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.pixKey') }}</label>
                 <input
                   v-model="pixKey"
                   type="text"
-                  placeholder="CPF, e-mail ou chave"
+                  :placeholder="t('profile.pixPlaceholder')"
                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
-                />
-              </div>
-            </div>
-            <div class="grid grid-cols-[1fr_88px] gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Cidade de atendimento</label>
-                <input
-                  v-model="proCidade"
-                  type="text"
-                  placeholder="Sua cidade"
-                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
-                />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">UF</label>
-                <input
-                  v-model="proUf"
-                  type="text"
-                  maxlength="2"
-                  placeholder="UF"
-                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all uppercase"
                 />
               </div>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Biografia / Experiência</label>
+              <AddressFields
+                :with-street="false"
+                v-model:country-code="proCountryCode"
+                v-model:state-code="proStateCode"
+                v-model:state-name="proStateName"
+                v-model:municipality="proMunicipality"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.bio') }}</label>
               <textarea
                 v-model="bio"
                 rows="3"
-                placeholder="Conte sua experiência, tempo de atuação e diferenciais..."
+                :placeholder="t('profile.bioPlaceholder')"
                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all resize-none"
               />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Bairros de cobertura de serviço</label>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.coverageNeighborhoods') }}</label>
               <div v-if="coverageBairros.length > 0" class="flex flex-wrap gap-1.5 mb-2">
                 <span
                   v-for="(bairro, idx) in coverageBairros"
@@ -474,7 +500,7 @@ async function handleSave() {
                 <input
                   v-model="newBairro"
                   type="text"
-                  placeholder="Digite o bairro e pressione Enter"
+                  :placeholder="t('profile.neighborhoodPlaceholder')"
                   class="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
                   @keydown.enter.prevent="addBairro"
                 />
@@ -483,33 +509,33 @@ async function handleSave() {
                   class="px-4 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold hover:bg-slate-700 transition-all shrink-0"
                   @click="addBairro"
                 >
-                  Adicionar
+                  {{ t('profile.add') }}
                 </button>
               </div>
-              <p class="text-[10px] text-slate-500 mt-1.5">Aparece no seu card do catálogo. Deixe vazio para "Atende toda a região".</p>
+              <p class="text-[10px] text-slate-500 mt-1.5">{{ t('profile.coverageHint') }}</p>
             </div>
             <div v-if="maxPhotos > 0">
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Fotos do portfólio ({{ portfolioPhotos.length + photoFiles.length }} de {{ maxPhotos }})</label>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.portfolioPhotos', { current: portfolioPhotos.length + photoFiles.length, max: maxPhotos }) }}</label>
               <div v-if="portfolioPhotos.length + photoFiles.length > 0" class="flex flex-wrap gap-2 mb-2">
                 <div v-for="(url, idx) in portfolioPhotos" :key="'saved-' + idx" class="relative w-16 h-16">
-                  <img :src="url" alt="Foto do portfólio" class="w-16 h-16 rounded-xl object-cover border border-slate-700" />
+                  <img :src="url" :alt="t('profile.portfolioAlt')" class="w-16 h-16 rounded-xl object-cover border border-slate-700" />
                   <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover foto ${idx + 1}`" @click="removeSavedPhoto(idx)">×</button>
                 </div>
                 <template v-for="(url, idx) in photoPreviews" :key="'staged-' + idx">
                   <div v-if="url" class="relative w-16 h-16">
-                    <img :src="url" alt="Prévia da foto" class="w-16 h-16 rounded-xl object-cover border border-amber-500/40" />
+                    <img :src="url" :alt="t('profile.previewAlt')" class="w-16 h-16 rounded-xl object-cover border border-amber-500/40" />
                     <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover prévia ${idx + 1}`" @click="removeStagedPhoto(idx)">×</button>
                   </div>
                 </template>
               </div>
               <label class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition-all inline-flex items-center gap-1.5">
                 <Camera class="w-3.5 h-3.5" />
-                Adicionar fotos
+                {{ t('profile.addPhotos') }}
                 <input type="file" accept="image/*" multiple class="hidden" @change="handlePortfolioSelect" />
               </label>
               <p v-if="!canAddPhoto(portfolioPhotos.length + photoFiles.length, maxPhotos)" class="text-[10px] text-amber-300 mt-1.5">
-                Limite do seu plano atingido.
-                <button type="button" class="font-bold underline" @click="emit('close'); goToTab('perfil_pro')">Ver planos</button>
+                {{ t('plans.featureLimitReached') }}
+                <button type="button" class="font-bold underline" @click="emit('close'); goToTab('perfil_pro')">{{ t('profile.viewPlans') }}</button>
               </p>
             </div>
           </template>
@@ -517,52 +543,26 @@ async function handleSave() {
           <!-- CLIENTE -->
           <template v-else>
             <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Data de nascimento</label>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.dataNascimento') }}</label>
               <input
                 v-model="birthDate"
                 type="date"
                 class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 transition-all [color-scheme:dark]"
               />
             </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Endereço</label>
-              <input
-                v-model="address"
-                type="text"
-                placeholder="Rua, número"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Bairro</label>
-              <input
-                v-model="bairro"
-                type="text"
-                placeholder="Seu bairro"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
-              />
-            </div>
-            <div class="grid grid-cols-3 gap-4">
-              <div class="col-span-2">
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">Cidade</label>
-                <input
-                  v-model="cidade"
-                  type="text"
-                  placeholder="Sua cidade"
-                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
-                />
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-300 mb-1.5">UF</label>
-                <input
-                  v-model="uf"
-                  type="text"
-                  maxlength="2"
-                  placeholder="UF"
-                  class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all uppercase"
-                />
-              </div>
-            </div>
+            <PhoneInput
+              v-model:phone="phone"
+              v-model:phone-country="phoneCountry"
+            />
+
+            <AddressFields
+              v-model:country-code="userCountryCode"
+              v-model:state-code="userStateCode"
+              v-model:state-name="userStateName"
+              v-model:municipality="userMunicipality"
+              v-model:street="address"
+              v-model:neighborhood="bairro"
+            />
           </template>
 
           <div v-if="errorMessage" class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-2">
@@ -578,7 +578,7 @@ async function handleSave() {
               class="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Loader2 v-if="saving" class="w-3.5 h-3.5 animate-spin" />
-              {{ saving ? 'Salvando...' : 'Salvar Alterações' }}
+              {{ saving ? t('common.saving') : t('profile.saveChanges') }}
             </button>
             <button
               type="button"
@@ -586,7 +586,7 @@ async function handleSave() {
               @click="emit('close')"
               class="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-all disabled:opacity-60"
             >
-              Cancelar
+              {{ t('common.cancel') }}
             </button>
           </div>
         </div>

@@ -529,7 +529,7 @@ export default {
     errPlanPhotos: 'Your plan allows up to {count} photo(s) in the portfolio.',
     errName: 'Enter the name.',
     errLoginAgain: 'Sign in again to register the profile.',
-    errPhone: 'Enter a valid phone number with area code (10 or 11 digits).',
+    errPhone: 'Enter a valid phone number for the selected country.',
     telefone: 'Phone (WhatsApp)',
     errCategoryLimit: 'Number of categories is above your plan limit.',
     errRemovePhotos: 'Remove extra photos to match your plan.',

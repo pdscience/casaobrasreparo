@@ -530,7 +530,7 @@ export default {
     errPlanPhotos: 'Seu plano permite até {count} foto(s) no portfólio.',
     errName: 'Informe o nome.',
     errLoginAgain: 'Faça login novamente para cadastrar o perfil.',
-    errPhone: 'Informe um telefone válido com DDD (10 ou 11 dígitos).',
+    errPhone: 'Informe um telefone válido para o país selecionado.',
     telefone: 'Telefone (WhatsApp)',
     errCategoryLimit: 'Número de categorias acima do limite do seu plano.',
     errRemovePhotos: 'Remova fotos excedentes para adequar ao plano.',
