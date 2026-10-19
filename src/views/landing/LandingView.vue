@@ -11,6 +11,7 @@ import { useNavigation } from '../../composables/useNavigation'
 import { useProfessionals } from '../../composables/useProfessionals'
 import { usePlans } from '../../composables/usePlans'
 import { useQuoteForm } from '../../composables/useQuoteForm'
+import { useUi } from '../../composables/useUi'
 import { useI18n } from '../../composables/useI18n'
 import {
   ArrowRight,
@@ -30,6 +31,7 @@ import {
   TrendingUp,
   User,
   Wrench,
+  X,
   Zap,
 } from 'lucide-vue-next'
 
@@ -41,6 +43,7 @@ const {
   goToTab, goToModule, scrollToId, trackCta,
 } = useNavigation()
 const { filterCategory, directoryPage } = useProfessionals()
+const { landingCategory } = useUi()
 const { dbPlanPrice, planLimitText } = usePlans()
 const { selectedCategory } = useQuoteForm()
 
@@ -56,13 +59,25 @@ const contactForm = ref({
 const contactSubmitting = ref(false)
 const contactSuccess = ref(false)
 
+/** Categoria real escolhida na grade de cartoes da landing. */
+const contactCategory = computed(() => landingCategory.value)
+
+/** O visitante digitou um servico que nao esta na lista. */
+const contactUnlisted = computed(() => contactForm.value.category === CATEGORY_UNLISTED)
+
+function clearContactCategory(): void {
+  landingCategory.value = ''
+  contactForm.value.category = ''
+  contactForm.value.categoryOther = ''
+}
+
 const handleContactSubmit = () => {
   contactSubmitting.value = true
   const { name, email, phone, category, subject, message } = contactForm.value
   const isUnlisted = category === CATEGORY_UNLISTED
   const categoryLine = isUnlisted
     ? `${t('landing.waCategoria')}: ${contactForm.value.categoryOther} (${t('landing.waCategoriaSugerida')})`
-    : category ? `${t('landing.waCategoria')}: ${categoryText(category)}` : ''
+    : contactCategory.value ? `${t('landing.waCategoria')}: ${categoryText(contactCategory.value)}` : ''
   // Experiência sem sair da página: abre WhatsApp em nova aba + mantém toast
   const waMessage = [
     t('landing.waOla'),
@@ -85,6 +100,7 @@ const handleContactSubmit = () => {
     contactSubmitting.value = false
     contactSuccess.value = true
     contactForm.value = { name: '', email: '', phone: '', category: '', categoryOther: '', subject: '', message: '' }
+    landingCategory.value = ''
     setTimeout(() => { contactSuccess.value = false }, 6000)
   }, 500)
 }
@@ -170,7 +186,11 @@ function initPremiumMotion() {
 function handleLandingCategory(categoryName: string) {
   trackCta('categoria_' + categoryName)
   filterCategory.value = categoryName
-  selectedCategory.value = CATEGORIES.some(c => c.name === categoryName) ? categoryName : selectedCategory.value
+  const isRealCategory = CATEGORIES.some(c => c.name === categoryName)
+  selectedCategory.value = isRealCategory ? categoryName : selectedCategory.value
+  // A grade de cartoes e a unica lista de categorias da landing: o formulario
+  // de contato reusa a categoria escolhida aqui em vez de repetir a lista.
+  landingCategory.value = isRealCategory ? categoryName : ''
   directoryPage.value = 1
   if (activeTab.value !== 'profissionais') {
     goToTab('profissionais')
@@ -487,7 +507,33 @@ onUnmounted(() => {
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input v-model="contactForm.email" type="email" required :placeholder="t('auth.emailPlaceholder') + ' *'" class="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />
-          <select v-model="contactForm.category" class="bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/60 transition-all"><option value="">{{ t('auth.categoria') }}...</option><option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ categoryText(cat.name) }}</option><option :value="CATEGORY_UNLISTED">{{ t('landing.servicoNaoLista') }}</option></select>
+          <div class="space-y-1.5">
+            <label class="block text-[11px] text-slate-400 font-medium">{{ t('auth.categoria') }}</label>
+            <div v-if="contactCategory" class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm font-semibold">
+                {{ categoryText(contactCategory) }}
+                <button type="button" @click="clearContactCategory" :aria-label="t('common.close')" class="hover:text-white transition-colors">
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </span>
+            </div>
+            <button
+              v-else-if="!contactUnlisted"
+              type="button"
+              @click="scrollToId('categorias')"
+              class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-400 hover:text-white hover:border-emerald-500/40 transition-all text-left"
+            >
+              {{ t('landing.escolhaServicoAcima') }}
+            </button>
+            <button
+              v-if="!contactCategory && !contactUnlisted"
+              type="button"
+              @click="contactForm.category = CATEGORY_UNLISTED"
+              class="text-[11px] text-slate-500 hover:text-emerald-300 underline transition-colors"
+            >
+              {{ t('landing.servicoNaoLista') }}
+            </button>
+          </div>
         </div>
         <div v-if="contactForm.category === CATEGORY_UNLISTED" class="space-y-1.5">
           <input v-model="contactForm.categoryOther" required :placeholder="t('landing.qualServico') + ' *'" class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all" />

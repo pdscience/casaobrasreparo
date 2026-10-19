@@ -150,6 +150,7 @@ export default {
     opening: 'Abriendo...',
     enviarViaWhatsapp: 'Enviar por WhatsApp',
     servicoNaoLista: 'Servicio que no está en la lista',
+    escolhaServicoAcima: 'Elige un servicio de la lista de arriba',
     qualServico: '¿Qué servicio? ej: Piscinero, Instalador de cortinas',
     digaQualServico: 'Dinos qué servicio necesitas — lo evaluaremos para añadirlo.',
     assunto: 'Asunto',

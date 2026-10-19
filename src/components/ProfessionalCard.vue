@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { Professional, Plan } from '../types'
 import { Star, MessageCircle, X, MapPin, FileText, User, Wrench } from 'lucide-vue-next'
 import { buildWhatsAppLink } from '../lib/whatsapp'
+import { countryName } from '../lib/geo'
 import { useAuth } from '../composables/useAuth'
 import { useI18n } from '../composables/useI18n'
 
@@ -18,11 +19,16 @@ const emit = defineEmits<{
   (e: 'clear'): void
 }>()
 
+const { t, categoryText, planText, lang } = useI18n()
+
 const cityLine = computed(() => {
   const city = props.professional.cidade?.trim() || ''
   const uf = props.professional.uf?.trim().toUpperCase() || ''
-  if (city && uf) return `${city} - ${uf}`
-  return city || uf || ''
+  const place = city && uf ? `${city} - ${uf}` : city || uf
+  const country = props.professional.country_code || ''
+  const countryLabel = country ? countryName(country, lang.value) : ''
+  if (place && countryLabel) return `${place} · ${countryLabel}`
+  return place || countryLabel
 })
 
 const primaryCategory = computed(() => props.professional.categories?.[0] || props.professional.category)
@@ -32,7 +38,6 @@ const extraCategories = computed(() => {
 })
 
 const { authUser } = useAuth()
-const { t, categoryText, planText } = useI18n()
 
 </script>
 
@@ -70,12 +75,12 @@ const { t, categoryText, planText } = useI18n()
             {{ planText(professional.plan) }}
           </span>
         </div>
-        <div class="mt-3 flex items-center gap-2 min-w-0">
-          <p class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300 truncate shrink-0 max-w-[60%]">
+        <div class="mt-3 space-y-1 min-w-0">
+          <p class="inline-flex items-center gap-1.5 max-w-full px-2.5 py-0.5 rounded-lg bg-amber-400/10 border border-amber-500/40 text-[11px] font-extrabold uppercase tracking-wide text-amber-300">
             <Wrench class="w-3 h-3 shrink-0" />
             <span class="truncate">{{ extraCategories > 0 ? `${categoryText(primaryCategory)} +${extraCategories}` : categoryText(primaryCategory) }}</span>
           </p>
-          <p v-if="cityLine" class="flex items-center gap-1 text-[13px] text-slate-100 truncate min-w-0">
+          <p v-if="cityLine" class="flex items-center gap-1 text-[12px] text-slate-300 min-w-0">
             <MapPin class="w-3 h-3 shrink-0 text-slate-500" />
             <span class="truncate">{{ cityLine }}</span>
           </p>

@@ -13,6 +13,8 @@ const scheduleDate = ref('')
 const scheduleTime = ref('14:00')
 const schedulePrice = ref('')
 const scheduleObs = ref('')
+// Categoria escolhida na landing: global para sobreviver a navegacao (a LP desmonta)
+const landingCategory = ref('')
 
 const toasts = ref<{ id: number; kind: 'success' | 'error' | 'info' | 'warning'; message: string }[]>([])
 let toastSeq = 0
@@ -28,5 +30,6 @@ export function dismissToast(id: number): void {
 export function useUi() {
   return { viewReceiptModal, rateOrderModal, scheduleModal, showUpgradeModal, showOnboardingPlans,
     isMobileMenuOpen, ratingStars, ratingComment, scheduleDate, scheduleTime, schedulePrice, scheduleObs,
+    landingCategory,
     toasts, pushToast, dismissToast }
 }
