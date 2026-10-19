@@ -58,6 +58,16 @@ UPDATE public.professionals SET phone_country_code = '55' WHERE phone_country_co
 
 `country_code` nasce `'BR'` por default — não precisa de UPDATE.
 
+### Estado em 2026-10-19
+
+Migration `migrations/20261019103000_add-international-address-phone.sql` **aplicada** no projeto InsForge `CasaOR` (`38e5fcd3-d3f9-438a-a9a3-8e6435a7ab7b`) via `npx -y @insforge/cli db migrations up --all`.
+
+Verificado no banco:
+- 9 colunas novas existem (5 em `users`, 4 em `professionals`).
+- Backfill populou `state`, `municipality` e `phone` (E.164) dos registros existentes; nenhum telefone ficou sem `+`.
+- Os `GRANT` são table-level (sem restrição por coluna) e as políticas RLS são por linha (`auth.uid()::text = auth_id`) — as colunas novas são graváveis pelo caminho autenticado sem ajuste de permissão.
+- Round-trip validado pelas próprias funções do app (`createUserRecord`, `createProfessional`, `updateUserRecord`, `updateProfessional`): os campos são gravados e lidos de volta corretamente.
+
 ## Dados geográficos
 
 **Gerador:** `scripts/build-geo-data.mjs` (roda uma vez, saída versionada no repo).
