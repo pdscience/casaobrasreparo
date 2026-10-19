@@ -1,6 +1,8 @@
+import { legacyToE164 } from './phone'
+
+/** Normaliza o telefone para dígitos no formato internacional (E.164). */
 export function formatWhatsAppPhone(phone: string): string {
-  const clean = phone.replace(/\D/g, '')
-  return clean.length <= 11 ? `55${clean}` : clean
+  return legacyToE164(phone).replace(/\D/g, '')
 }
 
 export function buildWhatsAppLink(phone: string, text: string): string {

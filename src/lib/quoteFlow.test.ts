@@ -22,6 +22,21 @@ describe('validateQuoteForm', () => {
       validateQuoteForm({ clientName: 'Maria', clientPhone: '11987654321', clientAddress: '' }).clientAddress,
     ).toBe('Informe o endereço do atendimento.')
   })
+  it('aceita telefone internacional em E.164', () => {
+    expect(
+      validateQuoteForm({ clientName: 'Maria', clientPhone: '+5511987654321', clientAddress: 'Rua A' }).clientPhone,
+    ).toBeUndefined()
+  })
+  it('aceita telefone internacional sem DDI de entrada', () => {
+    expect(
+      validateQuoteForm({ clientName: 'Maria', clientPhone: '+12015550123', clientAddress: 'Rua A' }).clientPhone,
+    ).toBeUndefined()
+  })
+  it('rejeita E.164 curto demais', () => {
+    expect(
+      validateQuoteForm({ clientName: 'Maria', clientPhone: '+5511', clientAddress: 'Rua A' }).clientPhone,
+    ).toBeDefined()
+  })
 })
 
 describe('buildQuotePayload', () => {
@@ -47,5 +62,11 @@ describe('buildQuotePayload', () => {
     const p = buildQuotePayload({ ...base, sendMode: 'broadcast' })
     expect(p.professional_id).toBeNull()
     expect(p.broadcast).toBe(true)
+  })
+  it('normaliza o telefone do cliente para E.164 no payload', () => {
+    expect(buildQuotePayload(base).client_phone).toBe('+5511987654321')
+    expect(
+      buildQuotePayload({ ...base, form: { ...base.form, clientPhone: '+12015550123' } }).client_phone,
+    ).toBe('+12015550123')
   })
 })

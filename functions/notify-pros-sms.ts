@@ -11,7 +11,13 @@ const WINDOW_MINUTES = 3
 const MAX_SENDS_PER_RUN = 50
 
 function onlyDigits(phone: string): string {
-  const digits = (phone || '').replace(/\D/g, '')
+  const raw = (phone || '').trim()
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return ''
+  // E.164 gravado pelo app (ex.: +5511987654321)
+  if (raw.startsWith('+')) return digits
+  // legado: numero nacional brasileiro
   return digits.startsWith('55') ? digits : `55${digits}`
 }
 
