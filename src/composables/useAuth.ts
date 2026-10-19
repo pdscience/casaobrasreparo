@@ -14,6 +14,8 @@ import {
 import { useNavigation } from './useNavigation'
 import { useUi, pushToast } from './useUi'
 import { useProfessionals } from './useProfessionals'
+import { useI18n } from './useI18n'
+import { dialOf } from '../lib/geo'
 
 const proProfile = ref<Professional>({
   id: '',
@@ -31,6 +33,10 @@ const proProfile = ref<Professional>({
   coverage_bairros: [],
   cidade: '',
   uf: '',
+  country_code: 'BR',
+  state: '',
+  municipality: '',
+  phone_country_code: '55',
   plan: 'gratuito',
   plan_status: 'active',
   stripe_customer_id: null,
@@ -61,9 +67,13 @@ const registerForm = ref({
   birth_date: '',
   address: '',
   bairro: '',
-  cidade: '',
-  uf: '',
   category: '',
+  country_code: 'BR',
+  state: '',
+  state_code: '',
+  municipality: '',
+  phone: '',
+  phone_country: 'BR',
 })
 
 const isRegistering = ref<boolean>(false)
@@ -107,7 +117,7 @@ async function loadProfessionalProfile(authId: string) {
           plan_expires_at: null,
         })
         proProfile.value = demoted
-        pushToast('info', 'Seu período de teste terminou. Você voltou ao plano gratuito.')
+        pushToast('info', useI18n().t('toasts.trialEnded'))
       } catch {
         // mantém o estado local; nova tentativa no próximo login
       }
@@ -139,7 +149,7 @@ async function handleLogin() {
     loginEmail.value = ''
     loginPassword.value = ''
   } catch (err) {
-    authError.value = err instanceof Error ? err.message : 'Falha ao entrar. Verifique e-mail e senha.'
+    authError.value = err instanceof Error ? err.message : useI18n().t('auth.erroLogin')
   } finally {
     authLoading.value = false
   }
@@ -147,9 +157,10 @@ async function handleLogin() {
 
 async function handleRegister() {
   const { goToTab } = useNavigation()
+  const { t } = useI18n()
   authError.value = ''
   if (registerForm.value.password.length < 6) {
-    authError.value = 'A senha deve ter pelo menos 6 caracteres.'
+    authError.value = t('auth.erroSenhaCurta')
     return
   }
   authLoading.value = true
@@ -161,8 +172,8 @@ async function handleRegister() {
     )
     if (!user) {
       authError.value = requireEmailVerification
-        ? 'Conta criada! Verifique seu e-mail para ativar o acesso.'
-        : 'Não foi possível criar a conta.'
+        ? t('auth.contaCriadaVerifique')
+        : t('auth.naoFoiPossivelCriar')
       return
     }
     authUser.value = user
@@ -174,8 +185,13 @@ async function handleRegister() {
       birth_date: registerForm.value.birth_date,
       address: registerForm.value.address,
       bairro: registerForm.value.bairro,
-      cidade: registerForm.value.cidade,
-      uf: registerForm.value.uf,
+      cidade: registerForm.value.municipality.trim(),
+      uf: registerForm.value.state_code.trim().toUpperCase(),
+      country_code: registerForm.value.country_code,
+      state: registerForm.value.state.trim(),
+      municipality: registerForm.value.municipality.trim(),
+      phone: registerForm.value.phone,
+      phone_country_code: dialOf(registerForm.value.phone_country),
       category: authRole.value === 'pro' ? registerForm.value.category : '',
     })
     userProfile.value = record
@@ -192,15 +208,19 @@ async function handleRegister() {
         portfolio_photos: [],
         referred_by: storedRef,
         email: registerForm.value.email.trim(),
-        phone: '',
+        phone: registerForm.value.phone,
+        phone_country_code: dialOf(registerForm.value.phone_country),
         rating: 0,
         reviews_count: 0,
         avatar: '',
         pix_key: '',
         bio: '',
         coverage_bairros: [],
-        cidade: '',
-        uf: '',
+        cidade: registerForm.value.municipality.trim(),
+        uf: registerForm.value.state_code.trim().toUpperCase(),
+        country_code: registerForm.value.country_code,
+        state: registerForm.value.state.trim(),
+        municipality: registerForm.value.municipality.trim(),
         plan: 'gratuito',
         plan_status: 'active',
         stripe_customer_id: null,
@@ -215,11 +235,15 @@ async function handleRegister() {
     }
     goToTab(authRole.value === 'pro' ? 'pedidos_pro' : 'solicitar')
     showAuth.value = false
-    registerForm.value = { name: '', email: '', password: '', birth_date: '', address: '', bairro: '', cidade: '', uf: '', category: '' }
+    registerForm.value = {
+      name: '', email: '', password: '', birth_date: '', address: '', bairro: '',
+      category: '', country_code: 'BR', state: '', state_code: '',
+      municipality: '', phone: '', phone_country: 'BR',
+    }
     authRole.value = 'client'
     authView.value = 'login'
   } catch (err) {
-    authError.value = err instanceof Error ? err.message : 'Falha ao criar a conta.'
+    authError.value = err instanceof Error ? err.message : useI18n().t('auth.erroCadastro')
   } finally {
     authLoading.value = false
   }
@@ -251,14 +275,18 @@ async function handleLogout() {
     coverage_bairros: [],
     cidade: '',
     uf: '',
+    country_code: 'BR',
+    state: '',
+    municipality: '',
+    phone_country_code: '55',
+    referral_code: null,
+    referred_by: null,
     plan: 'gratuito',
     plan_status: 'active',
     stripe_customer_id: null,
     stripe_subscription_id: null,
     plan_expires_at: null,
     trial_used: false,
-    referral_code: null,
-    referred_by: null,
     requests_this_month: 0,
     requests_reset_at: null,
   }

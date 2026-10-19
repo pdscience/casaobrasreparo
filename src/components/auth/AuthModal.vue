@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '../../composables/useAuth'
+import { useI18n } from '../../composables/useI18n'
 import { CATEGORIES } from '../../lib/categories'
+import AddressFields from '../AddressFields.vue'
+import PhoneInput from '../PhoneInput.vue'
 import { X, LogIn, User, Wrench } from 'lucide-vue-next'
 
 const router = useRouter()
 const route = useRoute()
+const { t, categoryText } = useI18n()
 
 const {
   showAuth, authView, authRole, authError, authLoading,
@@ -49,7 +53,7 @@ const logoUrl = '/logo_casa.png'
           <div class="flex items-center gap-2">
             <img :src="logoUrl" alt="Casa Obras e Reparos" class="w-9 h-9 rounded-xl object-cover" />
             <h2 class="font-black text-white text-lg tracking-tight">
-              {{ authView === 'login' ? 'Entrar' : 'Criar Conta' }}
+              {{ authView === 'login' ? t('auth.entrar') : t('auth.criarConta') }}
               <span class="block text-[11px] font-medium text-slate-400">Casa Obras e Reparos</span>
             </h2>
           </div>
@@ -69,7 +73,7 @@ const logoUrl = '/logo_casa.png'
               authView === 'login' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'
             ]"
           >
-            <LogIn class="w-3.5 h-3.5 inline mr-1" /> Entrar
+            <LogIn class="w-3.5 h-3.5 inline mr-1" /> {{ t('auth.entrar') }}
           </button>
           <button
             @click="authView = 'register'; authError = ''"
@@ -78,29 +82,29 @@ const logoUrl = '/logo_casa.png'
               authView === 'register' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'
             ]"
           >
-            <User class="w-3.5 h-3.5 inline mr-1" /> Cadastrar
+            <User class="w-3.5 h-3.5 inline mr-1" /> {{ t('auth.cadastrar') }}
           </button>
         </div>
 
         <!-- LOGIN FORM -->
         <form v-if="authView === 'login'" @submit.prevent="onLoginSubmit" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">E-mail *</label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.email') }} *</label>
             <input
               v-model="loginEmail"
               type="email"
               required
-              placeholder="seu@email.com"
+              :placeholder="t('auth.emailPlaceholder')"
               class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
             />
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">Senha *</label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.senha') }} *</label>
             <input
               v-model="loginPassword"
               type="password"
               required
-              placeholder="Sua senha"
+              :placeholder="t('auth.suaSenha')"
               class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
             />
           </div>
@@ -116,12 +120,12 @@ const logoUrl = '/logo_casa.png'
             class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.99]"
           >
             <LogIn class="w-4 h-4" />
-            {{ authLoading ? 'Entrando...' : 'Entrar' }}
+            {{ authLoading ? t('auth.entrando') : t('auth.entrar') }}
           </button>
 
           <p class="text-center text-xs text-slate-400">
-            Ainda não tem conta?
-            <button type="button" @click="authView = 'register'; authError = ''" class="text-amber-400 font-bold hover:underline">Cadastre-se</button>
+            {{ t('auth.aindaNaoTemConta') }}
+            <button type="button" @click="authView = 'register'; authError = ''" class="text-amber-400 font-bold hover:underline">{{ t('auth.cadastreSe') }}</button>
           </p>
         </form>
 
@@ -129,7 +133,7 @@ const logoUrl = '/logo_casa.png'
         <form v-else @submit.prevent="onRegisterSubmit" class="space-y-4">
           <!-- ROLE TOGGLE -->
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">Eu sou...</label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.euSou') }}</label>
             <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1">
               <button
                 type="button"
@@ -139,7 +143,7 @@ const logoUrl = '/logo_casa.png'
                   authRole === 'client' ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20' : 'text-slate-400 hover:text-white'
                 ]"
               >
-                <User class="w-3.5 h-3.5" /> Cliente
+                <User class="w-3.5 h-3.5" /> {{ t('common.cliente') }}
               </button>
               <button
                 type="button"
@@ -149,24 +153,24 @@ const logoUrl = '/logo_casa.png'
                   authRole === 'pro' ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20' : 'text-slate-400 hover:text-white'
                 ]"
               >
-                <Wrench class="w-3.5 h-3.5" /> Profissional
+                <Wrench class="w-3.5 h-3.5" /> {{ t('common.profissional') }}
               </button>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Nome completo *</label>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.nomeCompleto') }} *</label>
               <input
                 v-model="registerForm.name"
                 type="text"
                 required
-                placeholder="Seu nome"
+                :placeholder="t('auth.seuNome')"
                 class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
               />
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Data de nascimento</label>
+              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.dataNascimento') }}</label>
               <input
                 v-model="registerForm.birth_date"
                 type="date"
@@ -176,81 +180,52 @@ const logoUrl = '/logo_casa.png'
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">E-mail *</label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.email') }} *</label>
             <input
               v-model="registerForm.email"
               type="email"
               required
-              placeholder="seu@email.com"
+              :placeholder="t('auth.emailPlaceholder')"
               class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
             />
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">Senha * <span class="text-slate-500 font-normal">(mínimo 6 caracteres)</span></label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.senha') }} * <span class="text-slate-500 font-normal">({{ t('auth.senhaMin') }})</span></label>
             <input
               v-model="registerForm.password"
               type="password"
               required
-              placeholder="Crie uma senha"
+              :placeholder="t('auth.crieUmaSenha')"
               class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
             />
           </div>
 
           <div v-if="authRole === 'pro'">
-            <label class="block text-xs font-bold text-slate-300 mb-1.5">Categoria *</label>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('auth.categoria') }} *</label>
             <select
               v-model="registerForm.category"
               required
               class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
             >
-              <option value="">Selecione a categoria...</option>
-              <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ cat.name }}</option>
+              <option value="">{{ t('auth.selecioneCategoria') }}</option>
+              <option v-for="cat in CATEGORIES" :key="cat.name" :value="cat.name">{{ categoryText(cat.name) }}</option>
             </select>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Endereço</label>
-              <input
-                v-model="registerForm.address"
-                type="text"
-                placeholder="Rua, número"
-                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Bairro</label>
-              <input
-                v-model="registerForm.bairro"
-                type="text"
-                placeholder="Seu bairro"
-                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-              />
-            </div>
-          </div>
+          <AddressFields
+            v-model:country-code="registerForm.country_code"
+            v-model:state-code="registerForm.state_code"
+            v-model:state-name="registerForm.state"
+            v-model:municipality="registerForm.municipality"
+            v-model:street="registerForm.address"
+            v-model:neighborhood="registerForm.bairro"
+          />
 
-          <div class="grid grid-cols-3 gap-4">
-            <div class="col-span-2">
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">Cidade</label>
-              <input
-                v-model="registerForm.cidade"
-                type="text"
-                placeholder="Sua cidade"
-                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">UF</label>
-              <input
-                v-model="registerForm.uf"
-                type="text"
-                maxlength="2"
-                placeholder="UF"
-                class="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all uppercase"
-              />
-            </div>
-          </div>
+          <PhoneInput
+            v-model:phone="registerForm.phone"
+            v-model:phone-country="registerForm.phone_country"
+          />
 
           <div v-if="authError" class="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-2">
             <X class="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
@@ -263,12 +238,12 @@ const logoUrl = '/logo_casa.png'
             class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-[0.99]"
           >
             <User class="w-4 h-4" />
-            {{ authLoading ? 'Criando conta...' : 'Criar Conta' }}
+            {{ authLoading ? t('auth.criando') : t('auth.criarConta') }}
           </button>
 
           <p class="text-center text-xs text-slate-400">
-            Já tem conta?
-            <button type="button" @click="authView = 'login'; authError = ''" class="text-amber-400 font-bold hover:underline">Entrar</button>
+            {{ t('auth.jaTemConta') }}
+            <button type="button" @click="authView = 'login'; authError = ''" class="text-amber-400 font-bold hover:underline">{{ t('auth.entrar') }}</button>
           </p>
         </form>
       </div>
