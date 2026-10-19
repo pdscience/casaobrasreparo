@@ -53,10 +53,14 @@ function onInput(event: Event): void {
   emitPhone()
 }
 
-watch(phone, (value) => {
-  if (value === lastEmitted) return
-  hydrate(value)
-})
+watch(
+  phone,
+  (value) => {
+    if (value === lastEmitted) return
+    hydrate(value)
+  },
+  { immediate: true },
+)
 
 watch(phoneCountry, () => {
   if (!national.value) return
