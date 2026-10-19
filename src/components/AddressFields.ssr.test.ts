@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createSSRApp, h, ref } from 'vue'
+import { createSSRApp, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import AddressFields from './AddressFields.vue'
 import PhoneInput from './PhoneInput.vue'
