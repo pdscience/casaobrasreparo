@@ -12,6 +12,9 @@ import {
   DEFAULT_LANG,
   type Lang,
 } from './index'
+import pt from './pt'
+import en from './en'
+import es from './es'
 
 describe('interpolate', () => {
   it('substitui placeholders {chave}', () => {
@@ -96,5 +99,48 @@ describe('rotulos de valores gravados no banco', () => {
     expect(planLabel('en', 'ouro')).toBe('Gold')
     expect(planLabel('es', 'prata')).toBe('Plata')
     expect(planLabel('en', 'plano_x')).toBe('plano_x')
+  })
+})
+
+type LeafKind = 'string' | 'object'
+
+function collectPaths(tree: unknown, prefix = ''): Map<string, LeafKind> {
+  const paths = new Map<string, LeafKind>()
+  const kind: LeafKind = typeof tree === 'string' ? 'string' : 'object'
+  if (prefix) paths.set(prefix, kind)
+  if (kind === 'object' && tree && typeof tree === 'object' && !Array.isArray(tree)) {
+    for (const [key, value] of Object.entries(tree)) {
+      const childPrefix = prefix ? `${prefix}.${key}` : key
+      for (const [path, childKind] of collectPaths(value, childPrefix)) paths.set(path, childKind)
+    }
+  }
+  return paths
+}
+
+describe('paridade de chaves entre catalogos', () => {
+  const ptPaths = collectPaths(pt)
+  const enPaths = collectPaths(en)
+  const esPaths = collectPaths(es)
+
+  function diff(candidate: Map<string, LeafKind>) {
+    return {
+      missing: [...ptPaths.keys()].filter((path) => !candidate.has(path)),
+      extra: [...candidate.keys()].filter((path) => !ptPaths.has(path)),
+    }
+  }
+
+  it('en tem exatamente as mesmas chaves que pt', () => {
+    expect(diff(enPaths)).toEqual({ missing: [], extra: [] })
+  })
+
+  it('es tem exatamente as mesmas chaves que pt', () => {
+    expect(diff(esPaths)).toEqual({ missing: [], extra: [] })
+  })
+
+  it('tipos das folhas (string vs object) batem nos tres catalogos', () => {
+    for (const [path, kind] of ptPaths) {
+      expect(enPaths.get(path), `en:${path}`).toBe(kind)
+      expect(esPaths.get(path), `es:${path}`).toBe(kind)
+    }
   })
 })

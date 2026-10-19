@@ -227,6 +227,10 @@ export default {
     filterByUf: 'Filtrar por estado',
     filterByCity: 'Filtrar por ciudad',
     filterByNeighborhood: 'Filtrar por barrio',
+    favorites: 'Guardados',
+    favoritesOnly: 'Solo guardados',
+    noFavoritesTitle: 'Aún no hay guardados',
+    noFavoritesDesc: 'Toca el corazón en los profesionales que quieras guardar.',
   },
 
   card: {
@@ -236,6 +240,10 @@ export default {
     chooseAndRequest: 'Elegir y solicitar',
     cancelSelection: 'Cancelar selección',
     workPhoto: 'Foto del trabajo',
+    viewProfile: 'Ver perfil',
+    favorite: 'Guardar',
+    unfavorite: 'Quitar de guardados',
+    share: 'Compartir',
   },
 
   client: {
@@ -537,6 +545,19 @@ export default {
     errLoginPhoto: 'Inicia sesión de nuevo para subir la foto de perfil.',
     errLoginPhotos: 'Inicia sesión de nuevo para subir las fotos.',
     errSave: 'No fue posible guardar los cambios. Inténtalo de nuevo.',
+    title: 'Perfil del profesional',
+    reviews: 'Reseñas',
+    noReviews: 'Todavía no hay reseñas.',
+    noComment: 'Sin comentario.',
+    reviewsUnavailable: 'No se pudieron cargar las reseñas.',
+    share: 'Compartir',
+    favorite: 'Guardar',
+    unfavorite: 'Quitar de guardados',
+    shareCopied: '¡Enlace copiado!',
+    shareError: 'No se pudo compartir.',
+    chooseAndRequest: 'Pedir presupuesto',
+    viewPortfolio: 'Trabajos',
+    ratingSummary: '{rating} de 5 · {count} reseñas',
   },
 
   status: {

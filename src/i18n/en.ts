@@ -227,6 +227,10 @@ export default {
     filterByUf: 'Filter by state',
     filterByCity: 'Filter by city',
     filterByNeighborhood: 'Filter by neighborhood',
+    favorites: 'Saved',
+    favoritesOnly: 'Saved only',
+    noFavoritesTitle: 'No saved professionals yet',
+    noFavoritesDesc: 'Tap the heart on the professionals you want to keep.',
   },
 
   card: {
@@ -236,6 +240,10 @@ export default {
     chooseAndRequest: 'Choose and request',
     cancelSelection: 'Cancel selection',
     workPhoto: 'Work photo',
+    viewProfile: 'View profile',
+    favorite: 'Save',
+    unfavorite: 'Remove from saved',
+    share: 'Share',
   },
 
   client: {
@@ -537,6 +545,19 @@ export default {
     errLoginPhoto: 'Sign in again to upload the profile photo.',
     errLoginPhotos: 'Sign in again to upload the photos.',
     errSave: 'Could not save the changes. Please try again.',
+    title: 'Professional profile',
+    reviews: 'Reviews',
+    noReviews: 'No reviews yet.',
+    noComment: 'No comment.',
+    reviewsUnavailable: 'Could not load reviews.',
+    share: 'Share',
+    favorite: 'Save',
+    unfavorite: 'Remove from saved',
+    shareCopied: 'Link copied!',
+    shareError: 'Could not share.',
+    chooseAndRequest: 'Request a quote',
+    viewPortfolio: 'Work',
+    ratingSummary: '{rating} out of 5 · {count} reviews',
   },
 
   status: {

@@ -1,4 +1,5 @@
 import { insforge } from '../lib/insforge'
+import { clampStars, type ProfessionalReview } from '../lib/reviews'
 import type { AIAnalysis, Plan, Professional, Referral, ServiceRequest, User } from '../types'
 
 export async function getServiceRequests(): Promise<ServiceRequest[]> {
@@ -74,6 +75,16 @@ export async function getProfessionalByAuthId(authId: string): Promise<Professio
 
   if (error) throw error
   return (data as Professional) || null
+}
+
+export async function getProfessionalReviews(professionalId: string): Promise<ProfessionalReview[]> {
+  const { data, error } = await insforge.database
+    .rpc('get_professional_reviews', { p_id: professionalId })
+  if (error) throw error
+  return ((data as ProfessionalReview[]) || []).map((review) => ({
+    ...review,
+    stars: clampStars(review.stars),
+  }))
 }
 
 type ProfessionalDbDefaults =

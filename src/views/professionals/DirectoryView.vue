@@ -1,20 +1,28 @@
 <script setup lang="ts">
+import { watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { CATEGORIES } from '../../lib/categories'
 import { useNavigation } from '../../composables/useNavigation'
 import { useProfessionals } from '../../composables/useProfessionals'
 import { useQuoteForm } from '../../composables/useQuoteForm'
 import { useRequests } from '../../composables/useRequests'
 import { usePlans } from '../../composables/usePlans'
+import { useUi } from '../../composables/useUi'
+import { useFavorites } from '../../composables/useFavorites'
 import { useI18n } from '../../composables/useI18n'
 import ProfessionalCard from '../../components/ProfessionalCard.vue'
-import { HardHat } from 'lucide-vue-next'
+import { HardHat, Heart } from 'lucide-vue-next'
+import type { Professional } from '../../types'
 
 const { t, categoryText } = useI18n()
+const route = useRoute()
+const router = useRouter()
 
 const { activeTab, scrollToId, trackCta, goToTab } = useNavigation()
 const {
+  professionals,
   filterCategory, filterUf, filterCidade, filterBairro,
-  directoryPage,
+  directoryPage, favoritesOnly,
   availableUfs, availableCidades, availableBairros,
   filteredProfessionals, paginatedProfessionals,
   resetDirectoryFilters,
@@ -25,6 +33,38 @@ const {
 } = useQuoteForm()
 const { isLoading } = useRequests()
 const { planMap } = usePlans()
+const { profileModalPro } = useUi()
+const { favoritesCount } = useFavorites()
+
+function openProfile(pro: Professional): void {
+  profileModalPro.value = pro
+}
+
+function cleanProQuery(): void {
+  if (!route.query.pro) return
+  const query = { ...route.query }
+  delete query.pro
+  void router.replace({ query })
+}
+
+watch(
+  [() => route.query.pro, () => professionals.value, isLoading],
+  ([rawId, list, loading]) => {
+    const id = Array.isArray(rawId) ? rawId[0] : rawId
+    if (!id) return
+    const found = (list as Professional[]).find((p) => p.id === id)
+    if (found) {
+      profileModalPro.value = found
+      return
+    }
+    if (!loading && (list as Professional[]).length > 0) cleanProQuery()
+  },
+  { immediate: true },
+)
+
+watch(profileModalPro, (current) => {
+  if (!current) cleanProQuery()
+})
 
 function handleLandingCategory(categoryName: string) {
   trackCta('categoria_' + categoryName)
@@ -94,7 +134,17 @@ function handleLandingCategory(categoryName: string) {
         </option>
       </select>
       <button
-        v-if="filterCategory !== 'Todas' || filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos'"
+        type="button"
+        @click="favoritesOnly = !favoritesOnly"
+        :aria-pressed="favoritesOnly"
+        class="px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5"
+        :class="favoritesOnly ? 'bg-rose-500/15 text-rose-300 border-rose-500/40' : 'border-slate-700 text-slate-300 hover:border-rose-500/50 hover:text-rose-300'"
+      >
+        <Heart class="w-3.5 h-3.5" :class="favoritesOnly ? 'fill-rose-500 text-rose-500' : ''" />
+        {{ t('directory.favorites') }} ({{ favoritesCount }})
+      </button>
+      <button
+        v-if="filterCategory !== 'Todas' || filterUf !== 'Todas' || filterCidade !== 'Todas' || filterBairro !== 'Todos' || favoritesOnly"
         type="button"
         @click="resetDirectoryFilters"
         class="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
@@ -104,6 +154,17 @@ function handleLandingCategory(categoryName: string) {
     </div>
 
     <div v-if="isLoading" class="text-center text-xs text-slate-400 py-8">{{ t('directory.loading') }}</div>
+    <div v-else-if="favoritesOnly && favoritesCount === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
+      <p class="text-sm text-slate-300 font-bold">{{ t('directory.noFavoritesTitle') }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ t('directory.noFavoritesDesc') }}</p>
+      <button
+        type="button"
+        @click="favoritesOnly = false"
+        class="mt-3 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:border-amber-500/50 hover:text-amber-300 transition-all"
+      >
+        {{ t('directory.clearFilters') }}
+      </button>
+    </div>
     <div v-else-if="paginatedProfessionals.length === 0" class="bg-slate-900 rounded-2xl p-8 text-center border border-slate-800">
       <p class="text-sm text-slate-300 font-bold">{{ t('directory.emptyTitle') }}</p>
       <p class="text-xs text-slate-400 mt-1">{{ t('directory.emptyDesc') }}</p>
@@ -118,6 +179,7 @@ function handleLandingCategory(categoryName: string) {
         :selected="selectedProfessional?.id === pro.id"
         @choose="handleChooseProfessional"
         @clear="clearProfessionalSelection"
+        @view="openProfile"
       />
     </div>
     <p v-if="selectedProfessional" class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-2.5">
