@@ -10,6 +10,8 @@ describe('reviews', () => {
     expect(clampStars('4')).toBe(4)
     expect(clampStars(null)).toBe(0)
     expect(clampStars(Number.NaN)).toBe(0)
+    expect(clampStars(true)).toBe(0)
+    expect(clampStars(false)).toBe(0)
   })
 
   it('formata data de review no idioma pedido', () => {
@@ -20,5 +22,8 @@ describe('reviews', () => {
     expect(pt).toContain('2026')
     expect(en).toContain('2026')
     expect(pt).not.toBe(en)
+    const iso = formatReviewDate('2026-10-01T00:00:00.000Z', 'pt-BR')
+    expect(iso).toContain('2026')
+    expect(iso).not.toBe('')
   })
 })

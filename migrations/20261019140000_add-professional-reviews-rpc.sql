@@ -8,14 +8,18 @@ security definer
 set search_path = public
 as $$
   select
-    coalesce((rating->>'stars')::int, 0) as stars,
+    least(5, greatest(1, round((rating->>'stars')::numeric)))::int as stars,
     coalesce(rating->>'comment', '') as comment,
-    nullif(rating->>'date', '')::date as review_date
+    case
+      when (rating->>'date') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+        then left(rating->>'date', 10)::date
+    end as review_date
   from public.service_requests
   where professional_id = p_id
     and rating is not null
-    and (rating->>'stars') is not null
-  order by nullif(rating->>'date', '')::date desc nulls last
+    and (rating->>'stars') ~ '^[0-9]+$'
+    and (rating->>'stars')::numeric >= 1
+  order by review_date desc nulls last
   limit 10;
 $$;
 
