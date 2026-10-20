@@ -10,6 +10,8 @@ import {
   validatePhone,
 } from '../lib/phone'
 
+const props = defineProps<{ label?: string }>()
+
 const phone = defineModel<string>('phone', { default: '' })
 const phoneCountry = defineModel<string>('phoneCountry', { default: 'BR' })
 
@@ -72,7 +74,7 @@ watch(phoneCountry, () => {
 <template>
   <div>
     <label class="block text-xs font-bold text-slate-300 mb-1.5">
-      {{ t('common.telefone') }} *
+      {{ props.label || t('common.telefone') }} *
     </label>
     <div class="flex gap-2">
       <select

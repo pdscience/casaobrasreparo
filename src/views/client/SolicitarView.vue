@@ -12,6 +12,7 @@ import { useI18n } from '../../composables/useI18n'
 import type { Professional } from '../../types'
 import ClientSubTabs from '../../components/layout/ClientSubTabs.vue'
 import ProfessionalCard from '../../components/ProfessionalCard.vue'
+import PhoneInput from '../../components/PhoneInput.vue'
 import {
   AlertTriangle,
   ArrowRight,
@@ -20,6 +21,7 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ExternalLink,
   RefreshCw,
   Sparkles,
   Star,
@@ -29,7 +31,7 @@ import {
   X,
 } from 'lucide-vue-next'
 
-const { userMode } = useAuth()
+const { userMode, authUser, userProfile } = useAuth()
 const { t, categoryText, complexityText, planText } = useI18n()
 const { activeTab, goToTab } = useNavigation()
 const {
@@ -42,19 +44,33 @@ const {
 } = useProfessionals()
 const { planMap, PLAN_LABELS } = usePlans()
 const {
-  selectedCategory, clientName, clientPhone, clientAddress, notes,
-  imagePreview, photoFile, isAnalyzing, latestAiResult, createdOrderSuccess,
-  sendMode, formError, selectedProfessional, aiReadyToast, aiFallback, directCandidates,
+  selectedCategory, clientName, clientPhone, clientPhoneCountry, clientAddress, clientCity, clientUf, notes,
+  imagePreview, photoFile, isAnalyzing, isSubmitting, latestAiResult, createdOrderSuccess, createdOrderWhatsApp,
+  sendMode, formError, selectedProfessional, aiReadyToast, aiFallback, directCandidates, pendingAnalysis,
   handlePhotoUpload, handleAnalyzeWithAI, handleConfirmOrder,
-  handleChooseProfessional, clearProfessionalSelection,
+  handleChooseProfessional, clearProfessionalSelection, prefillClientData,
 } = useQuoteForm()
 const { profileModalPro } = useUi()
+
+watch(userProfile, (profile) => prefillClientData(profile), { immediate: true })
+watch(authUser, (user) => {
+  if (user && pendingAnalysis.value && !isAnalyzing.value) {
+    void handleAnalyzeWithAI()
+  }
+})
+
+function clearOrderSuccess(): void {
+  createdOrderSuccess.value = null
+  createdOrderWhatsApp.value = ''
+}
 
 function openProfile(pro: Professional): void {
   profileModalPro.value = pro
 }
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const ufOptions = computed(() => availableUfs.value.filter((uf) => uf !== 'Todas'))
+const cityOptions = computed(() => availableCidades.value.filter((cidade) => cidade !== 'Todas'))
 
 // Nesta aba a categoria e escolhida no formulario (passo 2) e nao existe um
 // filtro de categoria no diretorio. Por isso a grade ignora o filtro global de
@@ -86,7 +102,7 @@ watch(gridTotalPages, (tp) => {
         <ClientSubTabs :active="activeTab" />
 
         <!-- SUCCESS BANNER WHEN ORDER CREATED -->
-        <div v-if="createdOrderSuccess" class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div id="order-success" v-if="createdOrderSuccess" class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div class="flex items-start gap-3">
             <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
               <CheckCircle2 class="w-6 h-6" />
@@ -95,21 +111,34 @@ watch(gridTotalPages, (tp) => {
               <h3 class="font-bold text-white text-base">
                 {{ t('client.requestSent', { id: createdOrderSuccess.id }) }}
               </h3>
-              <p class="text-xs text-slate-300 mt-1">
+              <p v-if="createdOrderSuccess.broadcast" class="text-xs text-slate-300 mt-1">
+                {{ t('client.broadcastSent') }}
+              </p>
+              <p v-else class="text-xs text-slate-300 mt-1">
                 {{ t('client.proNotified', { name: findProfessional(createdOrderSuccess.professional_id)?.name || t('common.prestador') }) }}
               </p>
             </div>
           </div>
-          <div class="flex gap-2 w-full sm:w-auto">
+          <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+            <a
+              v-if="createdOrderWhatsApp"
+              :href="createdOrderWhatsApp"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-green-600 text-white text-xs font-bold hover:bg-green-500 transition-all flex items-center justify-center gap-2"
+            >
+              {{ t('client.openWhatsApp') }}
+              <ExternalLink class="w-4 h-4" />
+            </a>
             <button
-              @click="goToTab('meus_pedidos'); createdOrderSuccess = null"
+              @click="goToTab('meus_pedidos'); clearOrderSuccess()"
               class="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-2"
             >
               {{ t('client.trackRequest') }}
               <ArrowRight class="w-4 h-4" />
             </button>
             <button
-              @click="createdOrderSuccess = null"
+              @click="clearOrderSuccess()"
               class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700"
             >
               {{ t('common.close') }}
@@ -301,6 +330,9 @@ watch(gridTotalPages, (tp) => {
                 <p class="text-xs text-slate-400 mt-1">
                   {{ t('client.uploadFormats') }}
                 </p>
+                <p class="text-[11px] text-amber-400/80 mt-2">
+                  {{ t('client.photoOptional') }}
+                </p>
               </div>
             </div>
 
@@ -332,15 +364,11 @@ watch(gridTotalPages, (tp) => {
                     placeholder="Ex: Carlos Costa"
                   />
                 </div>
-                <div>
-                  <label class="text-[11px] text-slate-400 font-medium">{{ t('client.phoneNotify') }} *</label>
-                  <input
-                    type="text"
-                    v-model="clientPhone"
-                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 mt-1"
-                    placeholder="Ex: 11987654321"
-                  />
-                </div>
+                <PhoneInput
+                  v-model:phone="clientPhone"
+                  v-model:phone-country="clientPhoneCountry"
+                  :label="t('client.phoneNotify')"
+                />
               </div>
               <div>
                 <label class="text-[11px] text-slate-400 font-medium">{{ t('client.serviceAddress') }} *</label>
@@ -350,6 +378,34 @@ watch(gridTotalPages, (tp) => {
                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 mt-1"
                   placeholder="Ex: Rua Funchal, 200 - Bairro"
                 />
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-[1fr_120px] gap-3">
+                <div>
+                  <label class="text-[11px] text-slate-400 font-medium">{{ t('common.cidade') }} *</label>
+                  <input
+                    type="text"
+                    v-model="clientCity"
+                    list="client-cities"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 mt-1"
+                    placeholder="Ex: Dourados"
+                  />
+                  <datalist id="client-cities">
+                    <option v-for="cidade in cityOptions" :key="cidade" :value="cidade" />
+                  </datalist>
+                </div>
+                <div>
+                  <label class="text-[11px] text-slate-400 font-medium">{{ t('common.estadoProvincia') }} *</label>
+                  <input
+                    type="text"
+                    v-model="clientUf"
+                    list="client-ufs"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-500 mt-1"
+                    placeholder="MS"
+                  />
+                  <datalist id="client-ufs">
+                    <option v-for="uf in ufOptions" :key="uf" :value="uf" />
+                  </datalist>
+                </div>
               </div>
               <div>
                 <label class="text-[11px] text-slate-400 font-medium">{{ t('client.extraNote') }}</label>
@@ -366,7 +422,7 @@ watch(gridTotalPages, (tp) => {
             <button
               type="button"
               @click="handleAnalyzeWithAI"
-              :disabled="isAnalyzing || !imagePreview"
+              :disabled="isAnalyzing"
               class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-slate-950 font-extrabold text-sm hover:from-amber-400 hover:to-yellow-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
             >
               <template v-if="isAnalyzing">
@@ -622,16 +678,20 @@ watch(gridTotalPages, (tp) => {
                 <button
                   type="button"
                   @click="handleConfirmOrder"
-                  :disabled="sendMode === 'direct' && !selectedProfessional"
+                  :disabled="isSubmitting || (sendMode === 'direct' && !selectedProfessional)"
                   :class="[
                     'w-full py-3 rounded-xl font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2',
-                    (sendMode === 'broadcast' || (sendMode === 'direct' && selectedProfessional))
+                    (sendMode === 'broadcast' || (sendMode === 'direct' && selectedProfessional)) && !isSubmitting
                       ? 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-amber-500/20'
                       : 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
                   ]"
                 >
-                  <Check class="w-4 h-4" />
-                  <template v-if="sendMode === 'broadcast'">
+                  <RefreshCw v-if="isSubmitting" class="w-4 h-4 animate-spin" />
+                  <Check v-else class="w-4 h-4" />
+                  <template v-if="isSubmitting">
+                    {{ t('client.sending') }}
+                  </template>
+                  <template v-else-if="sendMode === 'broadcast'">
                     {{ t('client.sendToN', { count: prataBronzeCount }) }}
                   </template>
                   <template v-else-if="sendMode === 'direct' && selectedProfessional">

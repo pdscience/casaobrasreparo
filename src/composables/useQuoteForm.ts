@@ -1,7 +1,13 @@
 import { ref, computed, nextTick } from 'vue'
-import type { AIAnalysis, Professional, ServiceRequest } from '../types'
+import type { AIAnalysis, Professional, ServiceRequest, User } from '../types'
 import { analyzeWithAI, uploadServicePhoto, createServiceRequest } from '../api/insforgeService'
-import { validateQuoteForm, buildQuotePayload, type SendMode } from '../lib/quoteFlow'
+import {
+  validateQuoteForm,
+  buildQuotePayload,
+  hasAnalysisInput,
+  type SendMode,
+} from '../lib/quoteFlow'
+import { buildClientPrefill } from '../lib/quotePrefill'
 import { buildWhatsAppLink } from '../lib/whatsapp'
 import { useAuth } from './useAuth'
 import { useNavigation } from './useNavigation'
@@ -13,13 +19,19 @@ import { useI18n } from './useI18n'
 const selectedCategory = ref<string>('Eletricista')
 const clientName = ref<string>('')
 const clientPhone = ref<string>('')
+const clientPhoneCountry = ref<string>('BR')
 const clientAddress = ref<string>('')
+const clientCity = ref<string>('')
+const clientUf = ref<string>('')
 const notes = ref<string>('')
 const imagePreview = ref<string | null>(null)
 const photoFile = ref<File | null>(null)
 const isAnalyzing = ref<boolean>(false)
+const isSubmitting = ref<boolean>(false)
 const latestAiResult = ref<AIAnalysis | null>(null)
 const createdOrderSuccess = ref<ServiceRequest | null>(null)
+const createdOrderWhatsApp = ref<string>('')
+const pendingAnalysis = ref<boolean>(false)
 
 const selectedProfessional = ref<Professional | null>(null)
 // Profissionais elegíveis à escolha direta na categoria atual do formulário
@@ -68,6 +80,16 @@ function clearProfessionalSelection() {
   if (sendMode.value === 'direct') sendMode.value = null
 }
 
+function prefillClientData(profile: User | null): void {
+  if (!profile) return
+  const prefill = buildClientPrefill(profile)
+  if (!clientName.value.trim()) clientName.value = prefill.clientName
+  if (!clientPhone.value.trim()) clientPhone.value = prefill.clientPhone
+  if (!clientAddress.value.trim()) clientAddress.value = prefill.clientAddress
+  if (!clientCity.value.trim()) clientCity.value = prefill.clientCity
+  if (!clientUf.value.trim()) clientUf.value = prefill.clientUf
+}
+
 function handlePhotoUpload(e: Event) {
   const target = e.target as HTMLInputElement
   const file = target.files?.[0]
@@ -83,10 +105,20 @@ function handlePhotoUpload(e: Event) {
 
 async function handleAnalyzeWithAI() {
   const { t, categoryText } = useI18n()
-  if (!imagePreview.value) {
-    pushToast('warning', t('toasts.needPhoto'))
+  const { authUser, authRole, authView, authError, showAuth } = useAuth()
+  if (!hasAnalysisInput(Boolean(imagePreview.value), notes.value)) {
+    pushToast('warning', t('toasts.needPhotoOrNotes'))
     return
   }
+  if (!authUser.value) {
+    pendingAnalysis.value = true
+    authRole.value = 'client'
+    authView.value = 'register'
+    authError.value = ''
+    showAuth.value = true
+    return
+  }
+  pendingAnalysis.value = false
 
   isAnalyzing.value = true
   latestAiResult.value = null
@@ -95,7 +127,7 @@ async function handleAnalyzeWithAI() {
 
   try {
     const res = await analyzeWithAI(
-      imagePreview.value.startsWith('data:') ? imagePreview.value : undefined,
+      imagePreview.value?.startsWith('data:') ? imagePreview.value : undefined,
       selectedCategory.value,
       notes.value
     )
@@ -129,9 +161,9 @@ async function handleAnalyzeWithAI() {
 
 async function handleConfirmOrder() {
   const { authUser, authRole, authView, authError, showAuth } = useAuth()
-  const { goToTab } = useNavigation()
   const { requests } = useRequests()
   const { t, categoryText } = useI18n()
+  if (isSubmitting.value) return
   if (!latestAiResult.value || !sendMode.value) return
   formError.value = ''
 
@@ -149,15 +181,20 @@ async function handleConfirmOrder() {
       clientName: clientName.value,
       clientPhone: clientPhone.value,
       clientAddress: clientAddress.value,
+      clientCity: clientCity.value,
+      clientUf: clientUf.value,
     },
     {
       clientName: t('validation.clientName'),
       clientPhone: t('validation.clientPhone'),
       clientAddress: t('validation.clientAddress'),
+      clientCity: t('validation.clientCity'),
+      clientUf: t('validation.clientUf'),
     },
   )
   if (Object.keys(errors).length > 0) {
-    formError.value = errors.clientName || errors.clientPhone || errors.clientAddress || t('toasts.verifyData')
+    formError.value = errors.clientName || errors.clientPhone || errors.clientAddress
+      || errors.clientCity || errors.clientUf || t('toasts.verifyData')
     return
   }
 
@@ -166,54 +203,68 @@ async function handleConfirmOrder() {
     return
   }
 
-  let photoUrl = imagePreview.value || ''
-  if (photoFile.value) {
-    try {
-      photoUrl = await uploadServicePhoto(photoFile.value, authUser.value.id)
-    } catch (err) {
-      console.error('Erro ao enviar foto:', err)
-      pushToast('error', t('toasts.photoUploadError'))
-      formError.value = t('toasts.photoFailed')
-      return
-    }
-  }
-
-  const payload = buildQuotePayload({
-    clientId: authUser.value?.id ?? null,
-    form: { clientName: clientName.value, clientPhone: clientPhone.value, clientAddress: clientAddress.value },
-    category: selectedCategory.value,
-    photoUrl,
-    notes: notes.value || '',
-    aiAnalysis: latestAiResult.value,
-    finalPrice: latestAiResult.value.suggestedMinPrice || null,
-    sendMode: sendMode.value,
-    professionalId: selectedProfessional.value?.id ?? null,
-  })
-  const newOrder = payload as unknown as Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'>
-
+  isSubmitting.value = true
   try {
+    let photoUrl = imagePreview.value || ''
+    if (photoFile.value) {
+      try {
+        photoUrl = await uploadServicePhoto(photoFile.value, authUser.value.id)
+      } catch (err) {
+        console.error('Erro ao enviar foto:', err)
+        pushToast('error', t('toasts.photoUploadError'))
+        formError.value = t('toasts.photoFailed')
+        return
+      }
+    }
+
+    const payload = buildQuotePayload({
+      clientId: authUser.value?.id ?? null,
+      form: {
+        clientName: clientName.value,
+        clientPhone: clientPhone.value,
+        clientAddress: clientAddress.value,
+        clientCity: clientCity.value,
+        clientUf: clientUf.value,
+      },
+      category: selectedCategory.value,
+      photoUrl,
+      notes: notes.value || '',
+      aiAnalysis: latestAiResult.value,
+      finalPrice: latestAiResult.value.suggestedMinPrice || null,
+      sendMode: sendMode.value,
+      professionalId: selectedProfessional.value?.id ?? null,
+    })
+    const newOrder = payload as unknown as Omit<ServiceRequest, 'id' | 'created_at' | 'updated_at'>
+
     const created = await createServiceRequest(newOrder)
     requests.value = [created, ...requests.value]
 
+    let whatsAppUrl = ''
     if (sendMode.value === 'direct' && selectedProfessional.value?.phone) {
       const pro = selectedProfessional.value
       const msg = [
         t('ai.waIntro', { name: pro.name }),
         '',
-        t('ai.waBody', { category: categoryText(selectedCategory.value), description: latestAiResult.value!.description }),
+        t('ai.waBody', { category: categoryText(selectedCategory.value), description: latestAiResult.value.description }),
         '',
         t('ai.waAsk'),
       ].join('\n')
-      window.open(buildWhatsAppLink(pro.phone, msg), '_blank')
+      whatsAppUrl = buildWhatsAppLink(pro.phone, msg)
     }
 
+    createdOrderSuccess.value = created
+    createdOrderWhatsApp.value = whatsAppUrl
     resetForm()
-    goToTab('meus_pedidos')
+    nextTick(() => {
+      document.getElementById('order-success')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
   } catch (err) {
     console.error('Erro ao criar pedido:', err)
     formError.value = t('toasts.requestError', {
       reason: err instanceof Error ? err.message : t('toasts.serverError'),
     })
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -228,22 +279,28 @@ function resetForm() {
   notes.value = ''
   clientName.value = ''
   clientPhone.value = ''
+  clientPhoneCountry.value = 'BR'
   clientAddress.value = ''
+  clientCity.value = ''
+  clientUf.value = ''
+  aiFallback.value = false
+  pendingAnalysis.value = false
   selectedCategory.value = 'Eletricista'
 }
 
 export function useQuoteForm() {
   return {
-    selectedCategory, clientName, clientPhone, clientAddress, notes,
+    selectedCategory, clientName, clientPhone, clientPhoneCountry, clientAddress, clientCity, clientUf, notes,
     imagePreview, photoFile,
-    isAnalyzing, latestAiResult,
-    createdOrderSuccess,
+    isAnalyzing, isSubmitting, latestAiResult,
+    createdOrderSuccess, createdOrderWhatsApp,
     sendMode, formError,
     selectedProfessional,
-    aiReadyToast, aiFallback,
+    aiReadyToast, aiFallback, pendingAnalysis,
     directCandidates,
     handlePhotoUpload, handleAnalyzeWithAI, handleConfirmOrder,
     handleChooseProfessional, clearProfessionalSelection,
+    prefillClientData,
     resetForm,
   }
 }

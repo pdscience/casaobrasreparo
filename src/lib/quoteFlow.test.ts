@@ -1,48 +1,96 @@
 import { describe, it, expect } from 'vitest'
-import { validateQuoteForm, buildQuotePayload } from './quoteFlow'
+import {
+  validateQuoteForm,
+  buildQuotePayload,
+  composeServiceAddress,
+  hasAnalysisInput,
+} from './quoteFlow'
+
+const validForm = {
+  clientName: 'Maria Silva',
+  clientPhone: '11987654321',
+  clientAddress: 'Rua A, 100',
+  clientCity: 'Dourados',
+  clientUf: 'MS',
+}
 
 describe('validateQuoteForm', () => {
   it('aceita dados válidos', () => {
-    expect(
-      validateQuoteForm({ clientName: 'Maria Silva', clientPhone: '11987654321', clientAddress: 'Rua A, 100' }),
-    ).toEqual({})
+    expect(validateQuoteForm(validForm)).toEqual({})
   })
   it('erro quando nome vazio', () => {
     expect(
-      validateQuoteForm({ clientName: '  ', clientPhone: '11987654321', clientAddress: 'Rua A' }).clientName,
+      validateQuoteForm({ ...validForm, clientName: '  ' }).clientName,
     ).toBe('Informe seu nome completo.')
   })
   it('erro quando telefone tem menos de 10 dígitos', () => {
     expect(
-      validateQuoteForm({ clientName: 'Maria', clientPhone: '98765', clientAddress: 'Rua A' }).clientPhone,
+      validateQuoteForm({ ...validForm, clientPhone: '98765' }).clientPhone,
     ).toContain('WhatsApp válido')
   })
   it('erro quando endereço vazio', () => {
     expect(
-      validateQuoteForm({ clientName: 'Maria', clientPhone: '11987654321', clientAddress: '' }).clientAddress,
+      validateQuoteForm({ ...validForm, clientAddress: '' }).clientAddress,
     ).toBe('Informe o endereço do atendimento.')
+  })
+  it('erro quando cidade vazia', () => {
+    expect(
+      validateQuoteForm({ ...validForm, clientCity: '  ' }).clientCity,
+    ).toBe('Informe a cidade do atendimento.')
+  })
+  it('erro quando estado/UF vazio', () => {
+    expect(
+      validateQuoteForm({ ...validForm, clientUf: ' ' }).clientUf,
+    ).toBe('Informe o estado/UF do atendimento.')
   })
   it('aceita telefone internacional em E.164', () => {
     expect(
-      validateQuoteForm({ clientName: 'Maria', clientPhone: '+5511987654321', clientAddress: 'Rua A' }).clientPhone,
+      validateQuoteForm({ ...validForm, clientPhone: '+5511987654321' }).clientPhone,
     ).toBeUndefined()
   })
   it('aceita telefone internacional sem DDI de entrada', () => {
     expect(
-      validateQuoteForm({ clientName: 'Maria', clientPhone: '+12015550123', clientAddress: 'Rua A' }).clientPhone,
+      validateQuoteForm({ ...validForm, clientPhone: '+12015550123' }).clientPhone,
     ).toBeUndefined()
   })
   it('rejeita E.164 curto demais', () => {
     expect(
-      validateQuoteForm({ clientName: 'Maria', clientPhone: '+5511', clientAddress: 'Rua A' }).clientPhone,
+      validateQuoteForm({ ...validForm, clientPhone: '+5511' }).clientPhone,
     ).toBeDefined()
+  })
+})
+
+describe('composeServiceAddress', () => {
+  it('anexa cidade e UF ao endereço', () => {
+    expect(composeServiceAddress('Rua A, 100', 'Dourados', 'ms')).toBe('Rua A, 100 - Dourados - MS')
+  })
+  it('não duplica cidade/UF já presentes no endereço', () => {
+    expect(composeServiceAddress('Rua A, 100 - Dourados - MS', 'Dourados', 'MS')).toBe('Rua A, 100 - Dourados - MS')
+  })
+  it('usa cidade/UF como endereço quando a rua está vazia', () => {
+    expect(composeServiceAddress('', 'Dourados', 'MS')).toBe('Dourados - MS')
+  })
+  it('mantém apenas a rua quando não há cidade/UF', () => {
+    expect(composeServiceAddress('Rua A', '', '')).toBe('Rua A')
+  })
+})
+
+describe('hasAnalysisInput', () => {
+  it('exige foto ou observação', () => {
+    expect(hasAnalysisInput(false, '   ')).toBe(false)
+  })
+  it('aceita apenas foto', () => {
+    expect(hasAnalysisInput(true, '')).toBe(true)
+  })
+  it('aceita apenas observação', () => {
+    expect(hasAnalysisInput(false, 'Vazamento na pia')).toBe(true)
   })
 })
 
 describe('buildQuotePayload', () => {
   const base = {
     clientId: 'c1',
-    form: { clientName: ' Maria ', clientPhone: '11987654321', clientAddress: 'Rua A, 100' },
+    form: { clientName: ' Maria ', clientPhone: '11987654321', clientAddress: 'Rua A, 100', clientCity: 'Dourados', clientUf: 'MS' },
     category: 'Eletricista',
     photoUrl: 'x.png',
     notes: 'n',
@@ -68,5 +116,8 @@ describe('buildQuotePayload', () => {
     expect(
       buildQuotePayload({ ...base, form: { ...base.form, clientPhone: '+12015550123' } }).client_phone,
     ).toBe('+12015550123')
+  })
+  it('inclui cidade e UF no endereço enviado ao profissional', () => {
+    expect(buildQuotePayload(base).client_address).toBe('Rua A, 100 - Dourados - MS')
   })
 })
