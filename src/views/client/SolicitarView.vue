@@ -354,11 +354,11 @@ watch(gridTotalPages, (tp) => {
               </h4>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="text-[11px] text-slate-400 font-medium">{{ t('client.fullName') }} *</label>
+                  <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('client.fullName') }} *</label>
                   <input
                     type="text"
                     v-model="clientName"
-                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500 mt-1"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-all"
                     placeholder="Ex: Carlos Costa"
                   />
                 </div>

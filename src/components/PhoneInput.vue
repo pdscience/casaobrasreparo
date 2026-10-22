@@ -23,7 +23,6 @@ const error = ref('')
 let lastEmitted = ''
 
 const countries = computed(() => sortedCountries(lang.value))
-const dial = computed(() => dialOf(phoneCountry.value))
 
 const inputClass =
   'w-full min-w-0 flex-1 bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all'
@@ -96,6 +95,5 @@ watch(phoneCountry, () => {
       />
     </div>
     <p v-if="error" class="text-[11px] text-red-400 mt-1">{{ error }}</p>
-    <p v-else-if="dial" class="text-[11px] text-slate-500 mt-1">+{{ dial }}</p>
   </div>
 </template>
