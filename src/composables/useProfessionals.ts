@@ -87,12 +87,9 @@ watch([filterCategory, filterPlan, filterUf, filterCidade, filterBairro, favorit
   directoryPage.value = 1
 })
 
-const prataBronzeCount = computed(() => {
+const premiumCount = computed(() => {
   const { planMap } = usePlans()
-  return visibleProfessionals.value.filter(p => {
-    const rank = planMap.value.get(p.plan)?.rank
-    return rank === 2 || rank === 3
-  }).length
+  return visibleProfessionals.value.filter(p => planMap.value.get(p.plan)?.receives_broadcasts === true).length
 })
 
 function findProfessional(id: string | null): Professional | undefined {
@@ -109,7 +106,7 @@ export function useProfessionals() {
     directoryPage, favoritesOnly,
     availableCategories, availableUfs, availableCidades, availableBairros,
     filteredProfessionals, totalPages, paginatedProfessionals,
-    prataBronzeCount,
+    premiumCount,
     resetDirectoryFilters,
   }
 }

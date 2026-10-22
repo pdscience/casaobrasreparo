@@ -44,7 +44,7 @@ const {
 } = useNavigation()
 const { filterCategory, directoryPage } = useProfessionals()
 const { landingCategory } = useUi()
-const { dbPlanPrice, planLimitText } = usePlans()
+const { dbPlanPrice } = usePlans()
 const { selectedCategory } = useQuoteForm()
 
 const contactForm = ref({
@@ -114,7 +114,7 @@ const faqs = computed(() => [
   { q: t('landing.faq3Q'), a: t('landing.faq3A') },
   {
     q: t('landing.faq4Q'),
-    a: `${planText('bronze')} (${dbPlanPrice('bronze', 'R$34,90')}): ${planLimitText('bronze', '10/mês')}. ${planText('prata')} (${dbPlanPrice('prata', 'R$54,90')}): ${planLimitText('prata', '30/mês')}, ${t('plans.featureWhatsappProfile')} e ${t('plans.featurePriority')}. ${planText('ouro')} (${dbPlanPrice('ouro', 'R$79,90')}): ${t('plans.featureUnlimitedOrders')}, ${t('plans.featureHighlight')}, ${t('plans.featureVerifiedBadge')} e ${t('plans.featureAdvancedStats')}.`,
+    a: `${planText('gratuito')} (${dbPlanPrice('gratuito', 'R$0')}): ${t('plans.featureFreeProfile')}. ${planText('ouro')} (${dbPlanPrice('ouro', 'R$79,90')}): ${t('plans.featureUnlimitedOrders')}, ${t('plans.featureHighlight')}, ${t('plans.featureVerifiedBadge')} e ${t('plans.featureAdvancedStats')}.`,
   },
   { q: t('landing.faq5Q'), a: t('landing.faq5A') },
 ])
@@ -460,8 +460,7 @@ onUnmounted(() => {
           <p class="tesla-title text-white text-[28px] sm:text-[36px] leading-tight mt-4">{{ t('landing.recebaChamados') }}</p>
           <p class="mt-3 text-[14px] text-slate-300 max-w-md">{{ t('landing.recebaChamadosDesc') }}</p>
           <div class="mt-5 flex flex-wrap gap-2 text-[12px] font-medium">
-            <span class="px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">{{ planText('bronze') }} {{ dbPlanPrice('bronze', 'R$34,90') }}</span>
-            <span class="px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">{{ planText('prata') }} {{ dbPlanPrice('prata', 'R$54,90') }}</span>
+            <span class="px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-200">{{ planText('gratuito') }} {{ dbPlanPrice('gratuito', 'R$0') }}</span>
             <span class="px-4 py-1.5 rounded-full bg-amber-500 text-slate-950">{{ planText('ouro') }} {{ dbPlanPrice('ouro', 'R$79,90') }}</span>
           </div>
           <div class="mt-6 flex flex-col sm:flex-row gap-3">

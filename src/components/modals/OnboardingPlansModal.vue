@@ -27,13 +27,13 @@ const { t } = useI18n()
       </div>
 
       <div class="p-6 space-y-6">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div
             v-for="p in displayPlans"
             :key="p.id"
             :class="[
               'bg-slate-950/60 rounded-2xl p-4 border transition-all flex flex-col',
-              p.id === 'bronze' ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'border-slate-800'
+              p.id === 'ouro' ? 'border-amber-500/50 shadow-lg shadow-amber-500/10' : 'border-slate-800'
             ]"
           >
             <div class="flex items-center gap-2 mb-3">

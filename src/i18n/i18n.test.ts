@@ -96,7 +96,7 @@ describe('rotulos de valores gravados no banco', () => {
   })
   it('traduz planos mantendo os nomes de marca', () => {
     expect(planLabel('en', 'gratuito')).toBe('Free')
-    expect(planLabel('en', 'ouro')).toBe('Gold')
+    expect(planLabel('en', 'ouro')).toBe('Premium')
     expect(planLabel('es', 'prata')).toBe('Plata')
     expect(planLabel('en', 'plano_x')).toBe('plano_x')
   })

@@ -114,7 +114,7 @@ const revenueChartOption = computed(() => ({
       <div v-if="userMode === 'pro' && activeTab === 'faturamento'" class="space-y-6 animate-in fade-in duration-300">
         <ProSubTabs :active="activeTab" />
 
-        <!-- GATED: Relatórios avançados apenas no plano Ouro -->
+        <!-- GATED: Relatórios avançados apenas no plano Premium -->
         <template v-if="hasFeature('advancedReports')">
         <div>
           <h2 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">

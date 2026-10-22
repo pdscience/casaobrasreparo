@@ -39,7 +39,7 @@ const {
   filterPlan, filterUf, filterCidade, filterBairro,
   directoryPage,
   availableUfs, availableCidades, availableBairros,
-  visibleProfessionals, prataBronzeCount,
+  visibleProfessionals, premiumCount,
   resetDirectoryFilters,
 } = useProfessionals()
 const { planMap, PLAN_LABELS } = usePlans()
@@ -185,8 +185,6 @@ watch(gridTotalPages, (tp) => {
             >
               <option value="Todos">🏷️ {{ t('common.allPlans') }}</option>
               <option value="ouro">⭐ {{ planText('ouro') }}</option>
-              <option value="prata">🔒 {{ planText('prata') }}</option>
-              <option value="bronze">🛡️ {{ planText('bronze') }}</option>
             </select>
             <select
               v-model="filterUf"
@@ -586,7 +584,7 @@ watch(gridTotalPages, (tp) => {
                       <div>
                         <p class="font-bold text-white text-xs">{{ t('client.sendToAll') }}</p>
                         <p class="text-[10px] text-slate-400 mt-0.5">
-                          {{ t('client.broadcastDesc', { count: prataBronzeCount }) }}
+                          {{ t('client.broadcastDesc', { count: premiumCount }) }}
                         </p>
                       </div>
                     </button>
@@ -612,7 +610,7 @@ watch(gridTotalPages, (tp) => {
                   <div v-if="sendMode === 'broadcast'" class="space-y-2">
                     <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3 text-center">
                       <p class="text-[10px] text-cyan-400 font-bold">
-                        {{ t('client.sendingTo', { count: prataBronzeCount }) }}
+                        {{ t('client.sendingTo', { count: premiumCount }) }}
                       </p>
                     </div>
                     <button
@@ -692,7 +690,7 @@ watch(gridTotalPages, (tp) => {
                     {{ t('client.sending') }}
                   </template>
                   <template v-else-if="sendMode === 'broadcast'">
-                    {{ t('client.sendToN', { count: prataBronzeCount }) }}
+                    {{ t('client.sendToN', { count: premiumCount }) }}
                   </template>
                   <template v-else-if="sendMode === 'direct' && selectedProfessional">
                     {{ t('client.sendToPro') }} {{ selectedProfessional.name }}

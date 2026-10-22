@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import type { Plan } from '../types'
 import { changePlan, createCheckoutSession, createPortalSession } from '../api/insforgeService'
-import { User, ShieldCheck, Zap, Sparkles } from 'lucide-vue-next'
+import { User, Sparkles } from 'lucide-vue-next'
 import { useAuth } from './useAuth'
 import { useNavigation } from './useNavigation'
 import { useRequests } from './useRequests'
@@ -76,27 +76,14 @@ function hasFeature(feature: 'whatsappVisible' | 'advancedReports' | 'verifiedBa
 
 // Cada plano guarda chaves de i18n (não texto) para que nome, tagline,
 // features e cta sejam reescritos a cada troca de idioma.
+// Interface trabalha apenas com Gratuito e Premium. Bronze/Prata continuam
+// aceitos no banco/código antigo, mas não são mais exibidos.
 const PLANS = [
   {
     id: 'gratuito', icon: User,
     nameKey: 'plans.gratuito', taglineKey: 'plans.taglineGratuito',
     featureKeys: ['plans.featureFreeProfile', 'plans.featureBasicProfile'],
     ctaKey: 'plans.ctaStartFree',
-  },
-  {
-    id: 'bronze', icon: ShieldCheck,
-    nameKey: 'plans.bronze', taglineKey: 'plans.taglineBronze',
-    featureKeys: ['plans.featureOrdersPerMonth', 'plans.feature1Photo', 'plans.feature1Category'],
-    ctaKey: 'plans.ctaSubscribeBronze',
-  },
-  {
-    id: 'prata', icon: Zap,
-    nameKey: 'plans.prata', taglineKey: 'plans.taglinePrata',
-    featureKeys: [
-      'plans.featureOrdersPerMonth', 'plans.feature3Photos', 'plans.feature3Categories',
-      'plans.featureFullProfile', 'plans.featureWhatsappProfile', 'plans.featurePriority',
-    ],
-    ctaKey: 'plans.ctaSubscribePrata',
   },
   {
     id: 'ouro', icon: Sparkles,
@@ -110,7 +97,7 @@ const PLANS = [
 ]
 
 // Rótulos legíveis por id de plano (traduzidos e reativos ao idioma).
-// 'gratuito' é traduzido; Bronze/Prata/Ouro são nomes de marca mantidos.
+// 'gratuito' é traduzido; o id legado 'ouro' é exibido como Premium.
 const PLAN_LABELS = computed<Record<string, string>>(() => {
   const { planText } = useI18n()
   return {
@@ -178,7 +165,7 @@ const displayPlans = computed(() => {
 
 const upgradeRecommendation = computed(() => {
   const current = useAuth().proProfile.value.plan
-  const order: Record<string, number> = { gratuito: 0, bronze: 1, prata: 2, ouro: 3 }
+  const order: Record<string, number> = { gratuito: 0, ouro: 1 }
   const next = displayPlans.value.find((p) => order[p.id] === order[current] + 1)
   if (!next) return null
   return { plan: next.id, label: next.name, price: next.price, features: next.features }
