@@ -160,13 +160,13 @@ async function handleShare(): Promise<void> {
           <p v-else class="text-[11px] text-slate-400 mt-0.5">{{ t('card.wholeRegion') }}</p>
         </div>
       </div>
-      <div v-if="portfolioItems.length" class="flex gap-2 mt-2">
+      <div v-if="portfolioItems.length" class="grid grid-cols-3 gap-2 mt-2">
         <img
           v-for="(photo, i) in portfolioItems.slice(0, 3)"
           :key="photo.url"
           :src="photo.url"
           :alt="photo.caption?.trim() || t('card.workPhoto')"
-          class="w-16 h-16 rounded-xl object-cover border border-slate-800"
+          class="w-full aspect-square rounded-xl object-cover border border-slate-800"
         />
       </div>
     </div>
