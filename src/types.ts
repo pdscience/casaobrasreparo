@@ -11,6 +11,11 @@ export interface AIAnalysis {
   recommendedAction: string
 }
 
+export interface PortfolioItem {
+  url: string
+  caption: string
+}
+
 export interface Professional {
   id: string
   auth_id?: string | null
@@ -27,7 +32,9 @@ export interface Professional {
   bio: string
   coverage_bairros: string[]
   categories: string[]
-  portfolio_photos: string[]
+  portfolio_items: PortfolioItem[]
+  /** @deprecated usar portfolio_items (mantido apenas para leitura de dados antigos). */
+  portfolio_photos?: string[]
   cidade: string
   uf: string
   country_code: string

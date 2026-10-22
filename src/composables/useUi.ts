@@ -16,6 +16,7 @@ const scheduleObs = ref('')
 // Categoria escolhida na landing: global para sobreviver a navegacao (a LP desmonta)
 const landingCategory = ref('')
 const profileModalPro = ref<Professional | null>(null)
+const photoLightboxOpen = ref(false)
 
 const toasts = ref<{ id: number; kind: 'success' | 'error' | 'info' | 'warning'; message: string }[]>([])
 let toastSeq = 0
@@ -31,6 +32,6 @@ export function dismissToast(id: number): void {
 export function useUi() {
   return { viewReceiptModal, rateOrderModal, scheduleModal, showUpgradeModal, showOnboardingPlans,
     isMobileMenuOpen, ratingStars, ratingComment, scheduleDate, scheduleTime, schedulePrice, scheduleObs,
-    landingCategory, profileModalPro,
+    landingCategory, profileModalPro, photoLightboxOpen,
     toasts, pushToast, dismissToast }
 }

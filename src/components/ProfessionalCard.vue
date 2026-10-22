@@ -5,6 +5,7 @@ import { Star, MessageCircle, X, MapPin, FileText, User, Wrench, Heart, Share2 }
 import { buildWhatsAppLink } from '../lib/whatsapp'
 import { countryName } from '../lib/geo'
 import { shareProfessional } from '../lib/share'
+import { normalizePortfolioItems } from '../lib/portfolio'
 import { useAuth } from '../composables/useAuth'
 import { useFavorites } from '../composables/useFavorites'
 import { useUi } from '../composables/useUi'
@@ -24,6 +25,8 @@ const emit = defineEmits<{
 }>()
 
 const { t, categoryText, planText, lang } = useI18n()
+
+const portfolioItems = computed(() => normalizePortfolioItems(props.professional.portfolio_items))
 
 const cityLine = computed(() => {
   const city = props.professional.cidade?.trim() || ''
@@ -157,12 +160,12 @@ async function handleShare(): Promise<void> {
           <p v-else class="text-[11px] text-slate-400 mt-0.5">{{ t('card.wholeRegion') }}</p>
         </div>
       </div>
-      <div v-if="professional.portfolio_photos?.length" class="flex gap-2 mt-2">
+      <div v-if="portfolioItems.length" class="flex gap-2 mt-2">
         <img
-          v-for="(url, i) in professional.portfolio_photos.slice(0, 3)"
-          :key="i"
-          :src="url"
-          :alt="t('card.workPhoto')"
+          v-for="(photo, i) in portfolioItems.slice(0, 3)"
+          :key="photo.url"
+          :src="photo.url"
+          :alt="photo.caption?.trim() || t('card.workPhoto')"
           class="w-16 h-16 rounded-xl object-cover border border-slate-800"
         />
       </div>

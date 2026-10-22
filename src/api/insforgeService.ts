@@ -1,4 +1,5 @@
 import { insforge } from '../lib/insforge'
+import { portfolioStorageKey } from '../lib/portfolio'
 import { clampStars, type ProfessionalReview } from '../lib/reviews'
 import type { AIAnalysis, Plan, Professional, Referral, ServiceRequest, User } from '../types'
 
@@ -176,6 +177,39 @@ export async function uploadPortfolioPhoto(file: File, ownerId: string): Promise
 function isTransientUploadError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err)
   return /Slow Down|503|500|502|504|network|timeout|fetch failed/i.test(msg)
+}
+
+// Remove o arquivo do portfolio do storage. Best-effort: a remocao do item no
+// banco e o que importa; um arquivo orfao nao quebra a galeria.
+export async function removePortfolioFile(url: string): Promise<void> {
+  const key = portfolioStorageKey(url)
+  if (!key) return
+  try {
+    const { error } = await insforge.storage.from('service-photos').remove([key])
+    if (error) console.warn('Falha ao remover arquivo do portfolio:', error)
+  } catch (err) {
+    console.warn('Falha ao remover arquivo do portfolio:', err)
+  }
+}
+
+// Reduz a foto antes do upload (fotos de celular chegam com varios MB).
+export async function compressPortfolioImage(file: File, maxDim = 1280, quality = 0.8): Promise<File> {
+  if (typeof document === 'undefined') return file
+  try {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(String(reader.result))
+      reader.onerror = () => reject(new Error('read'))
+      reader.readAsDataURL(file)
+    })
+    const reduced = await downscaleDataUrl(dataUrl, maxDim, quality)
+    if (reduced === dataUrl) return file
+    const blob = await (await fetch(reduced)).blob()
+    const name = `${file.name.replace(/\.[^.]+$/, '') || 'foto'}.jpg`
+    return new File([blob], name, { type: 'image/jpeg' })
+  } catch {
+    return file
+  }
 }
 
 export async function uploadServicePhoto(file: File, ownerId: string): Promise<string> {

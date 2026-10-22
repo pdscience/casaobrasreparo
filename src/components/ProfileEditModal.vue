@@ -2,11 +2,11 @@
 import { ref, watch, computed } from 'vue'
 import { X, Camera, User, Loader2, AlertCircle, MapPin } from 'lucide-vue-next'
 import type { Professional, User as UserProfile } from '../types'
-import { uploadProfessionalAvatar, updateProfessional, updateUserRecord, createProfessional, uploadPortfolioPhoto } from '../api/insforgeService'
+import { uploadProfessionalAvatar, updateProfessional, updateUserRecord, createProfessional } from '../api/insforgeService'
 import { useNavigation } from '../composables/useNavigation'
 import { usePlans } from '../composables/usePlans'
 import { useI18n } from '../composables/useI18n'
-import { canAddPhoto, canAddCategory, isOverCategoryLimit } from '../lib/planLimits'
+import { canAddCategory, isOverCategoryLimit } from '../lib/planLimits'
 import { dialOf } from '../lib/geo'
 import { countryFromE164, validateE164 } from '../lib/phone'
 import AddressFields from './AddressFields.vue'
@@ -32,9 +32,6 @@ const errorMessage = ref('')
 const name = ref('')
 const category = ref('')
 const selectedCategories = ref<string[]>([])
-const photoFiles = ref<File[]>([])
-const photoPreviews = ref<string[]>([])
-const portfolioPhotos = ref<string[]>([])
 const email = ref('')
 const phone = ref('')
 const pixKey = ref('')
@@ -68,7 +65,6 @@ const currentAvatar = computed(() => avatarPreview.value || props.professional?.
 
 const { goToTab } = useNavigation()
 const { planFeatures } = usePlans()
-const maxPhotos = computed(() => planFeatures.value.maxPhotos)
 const maxCategories = computed(() => planFeatures.value.maxCategories)
 const categoriesLabel = computed(() =>
   maxCategories.value === null
@@ -91,9 +87,6 @@ watch(
       const initialCats = [...(props.professional?.categories ?? [])]
       if (initialCats.length === 0 && props.professional?.category) initialCats.push(props.professional.category)
       selectedCategories.value = initialCats
-      portfolioPhotos.value = [...(props.professional?.portfolio_photos ?? [])]
-      photoFiles.value = []
-      photoPreviews.value = []
       email.value = props.professional?.email ?? ''
       phone.value = props.professional?.phone ?? ''
       phoneCountry.value = countryFromE164(props.professional?.phone ?? '') || props.professional?.country_code || 'BR'
@@ -160,33 +153,6 @@ function toggleCategory(cat: string) {
   selectedCategories.value.push(cat)
 }
 
-function handlePortfolioSelect(e: Event) {
-  const files = Array.from((e.target as HTMLInputElement).files ?? [])
-  for (const file of files) {
-    if (!canAddPhoto(portfolioPhotos.value.length + photoFiles.value.length, maxPhotos.value)) {
-      fail(t('profile.errPlanPhotos', { count: maxPhotos.value }))
-      break
-    }
-    const idx = photoFiles.value.push(file) - 1
-    photoPreviews.value[idx] = ''
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      if (photoFiles.value[idx] === file) photoPreviews.value[idx] = reader.result as string
-    }
-    reader.readAsDataURL(file)
-  }
-  ;(e.target as HTMLInputElement).value = ''
-}
-
-function removeStagedPhoto(index: number) {
-  photoFiles.value.splice(index, 1)
-  photoPreviews.value.splice(index, 1)
-}
-
-function removeSavedPhoto(index: number) {
-  portfolioPhotos.value.splice(index, 1)
-}
-
 function fail(message: string) {
   errorMessage.value = message
 }
@@ -227,7 +193,7 @@ async function handleSave() {
           name: trimmedName,
           category: selectedCategories.value[0] ?? '',
           categories: [...selectedCategories.value],
-          portfolio_photos: [],
+          portfolio_items: [],
           email: email.value.trim(),
           phone: createPhone.e164,
           phone_country_code: dialOf(phoneCountry.value),
@@ -273,11 +239,6 @@ async function handleSave() {
       fail(t('profile.errCategoryLimit'))
       return
     }
-    if (maxPhotos.value > 0 && portfolioPhotos.value.length + photoFiles.value.length > maxPhotos.value) {
-      fail(t('profile.errRemovePhotos'))
-      return
-    }
-
     saving.value = true
     try {
       const ownerId = professional.auth_id
@@ -286,17 +247,10 @@ async function handleSave() {
         return
       }
       const avatarUrl = avatarFile.value && ownerId ? await uploadProfessionalAvatar(avatarFile.value, ownerId) : professional.avatar
-      const uploaded: string[] = []
-      for (const file of photoFiles.value) {
-        if (!ownerId) { fail(t('profile.errLoginPhotos')); return }
-        uploaded.push(await uploadPortfolioPhoto(file, ownerId))
-      }
-      const finalPhotos = [...portfolioPhotos.value, ...uploaded]
       const updated = await updateProfessional(professional.id, {
         name: trimmedName,
         category: selectedCategories.value[0] ?? '',
         categories: [...selectedCategories.value],
-        portfolio_photos: finalPhotos,
         email: email.value.trim(),
         phone: phoneCheck.e164,
         phone_country_code: dialOf(phoneCountry.value),
@@ -513,30 +467,6 @@ async function handleSave() {
                 </button>
               </div>
               <p class="text-[10px] text-slate-500 mt-1.5">{{ t('profile.coverageHint') }}</p>
-            </div>
-            <div v-if="maxPhotos > 0">
-              <label class="block text-xs font-bold text-slate-300 mb-1.5">{{ t('profile.portfolioPhotos', { current: portfolioPhotos.length + photoFiles.length, max: maxPhotos }) }}</label>
-              <div v-if="portfolioPhotos.length + photoFiles.length > 0" class="flex flex-wrap gap-2 mb-2">
-                <div v-for="(url, idx) in portfolioPhotos" :key="'saved-' + idx" class="relative w-16 h-16">
-                  <img :src="url" :alt="t('profile.portfolioAlt')" class="w-16 h-16 rounded-xl object-cover border border-slate-700" />
-                  <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover foto ${idx + 1}`" @click="removeSavedPhoto(idx)">×</button>
-                </div>
-                <template v-for="(url, idx) in photoPreviews" :key="'staged-' + idx">
-                  <div v-if="url" class="relative w-16 h-16">
-                    <img :src="url" :alt="t('profile.previewAlt')" class="w-16 h-16 rounded-xl object-cover border border-amber-500/40" />
-                    <button type="button" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-950 border border-slate-700 text-slate-300 text-[10px] leading-none" :title="`Remover prévia ${idx + 1}`" @click="removeStagedPhoto(idx)">×</button>
-                  </div>
-                </template>
-              </div>
-              <label class="cursor-pointer px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs hover:bg-slate-700 transition-all inline-flex items-center gap-1.5">
-                <Camera class="w-3.5 h-3.5" />
-                {{ t('profile.addPhotos') }}
-                <input type="file" accept="image/*" multiple class="hidden" @change="handlePortfolioSelect" />
-              </label>
-              <p v-if="!canAddPhoto(portfolioPhotos.length + photoFiles.length, maxPhotos)" class="text-[10px] text-amber-300 mt-1.5">
-                {{ t('plans.featureLimitReached') }}
-                <button type="button" class="font-bold underline" @click="emit('close'); goToTab('perfil_pro')">{{ t('profile.viewPlans') }}</button>
-              </p>
             </div>
           </template>
 

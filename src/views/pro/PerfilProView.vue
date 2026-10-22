@@ -10,6 +10,8 @@ import type { Referral } from '../../types'
 import { pushToast } from '../../composables/useUi'
 import { useI18n } from '../../composables/useI18n'
 import ProSubTabs from '../../components/layout/ProSubTabs.vue'
+import PortfolioManager from '../../components/PortfolioManager.vue'
+import type { PortfolioItem } from '../../types'
 import {
   Building2,
   Wrench,
@@ -36,6 +38,10 @@ const {
   PLAN_LABELS, PLAN_PRICES,
   subscribePlan, handleOpenPortal,
 } = usePlans()
+
+function handlePortfolioSaved(items: PortfolioItem[]) {
+  proProfile.value.portfolio_items = items
+}
 
 const trialDaysLeft = computed(() => {
   if (!proProfile.value.plan_expires_at) return 0
@@ -151,6 +157,16 @@ async function copyReferralLink() {
             <p class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800">
               {{ proProfile.bio }}
             </p>
+
+            <div class="space-y-3 pt-2">
+              <h3 class="font-bold text-white text-base">{{ t('portfolio.title') }}</h3>
+              <PortfolioManager
+                :professional-id="proProfile.id"
+                :owner-id="proProfile.auth_id ?? null"
+                :items="proProfile.portfolio_items ?? []"
+                @saved="handlePortfolioSaved"
+              />
+            </div>
 
             <h3 class="font-bold text-white text-base flex items-center gap-2 pt-2">
               <Star class="w-5 h-5 text-amber-400 fill-amber-400" />
