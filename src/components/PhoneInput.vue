@@ -26,7 +26,7 @@ const countries = computed(() => sortedCountries(lang.value))
 const dial = computed(() => dialOf(phoneCountry.value))
 
 const inputClass =
-  'w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all'
+  'w-full min-w-0 flex-1 bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 hover:border-slate-600 transition-all'
 
 function hydrate(value: string): void {
   if (!value) {
@@ -76,10 +76,10 @@ watch(phoneCountry, () => {
     <label class="block text-xs font-bold text-slate-300 mb-1.5">
       {{ props.label || t('common.telefone') }} *
     </label>
-    <div class="flex gap-2">
+    <div class="flex flex-col gap-2 sm:flex-row">
       <select
         v-model="phoneCountry"
-        class="bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/60 transition-all"
+        class="w-full min-w-0 shrink-0 truncate bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/60 transition-all sm:w-40"
         :aria-label="t('common.codigoPais')"
       >
         <option v-for="c in countries" :key="c.code" :value="c.code">
